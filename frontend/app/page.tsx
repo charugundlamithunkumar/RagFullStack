@@ -27,6 +27,7 @@ import {
   PanelLeftOpen,
   MoreHorizontal,
   Edit3,
+  Copy,
 } from "lucide-react";
 import { getSessionId } from "@/lib/session";
 import {
@@ -46,7 +47,27 @@ import {
 import type { DocumentInfo, ChatMessage, DebugChunk } from "@/lib/types";
 
 /* ════════════════════════════════════════════════════════════
-   MARKDOWN RENDERER — High Readability
+   CLEAN LATEX MATH / EQUATION PARSER
+   Cleans raw LaTeX delimiters (\[, \], \text{}, \frac{}{}) into formatted math
+   ════════════════════════════════════════════════════════════ */
+function cleanMathText(str: string): string {
+  if (!str) return "";
+  let cleaned = str;
+  // Replace \text{foo} -> foo
+  cleaned = cleaned.replace(/\\text\{([^}]+)\}/g, "$1");
+  // Replace \frac{a}{b} -> (a / b)
+  cleaned = cleaned.replace(/\\frac\{([^}]+)\}\{([^}]+)\}/g, "($1 / $2)");
+  // Replace \dots -> ...
+  cleaned = cleaned.replace(/\\dots/g, "...");
+  // Replace \times -> ×
+  cleaned = cleaned.replace(/\\times/g, "×");
+  // Replace \cdot -> ·
+  cleaned = cleaned.replace(/\\cdot/g, "·");
+  return cleaned;
+}
+
+/* ════════════════════════════════════════════════════════════
+   MARKDOWN RENDERER — High Readability & Math Formatting
    Headings & Bold terms in Blue (#007AFF)
    ════════════════════════════════════════════════════════════ */
 function RenderMarkdown({ text }: { text: string }) {
@@ -56,6 +77,44 @@ function RenderMarkdown({ text }: { text: string }) {
 
   while (i < lines.length) {
     const line = lines[i];
+
+    // Math block equation: \[ ... \] or $$ ... $$
+    if (line.trim().startsWith("\\[") || line.trim().startsWith("$$")) {
+      const mathLines: string[] = [];
+      let currentLine = line.replace(/^\\\[|^\$\$/, "").trim();
+      
+      if (currentLine.endsWith("\\]") || currentLine.endsWith("$$")) {
+        currentLine = currentLine.replace(/\\\]$|\$\$$/, "").trim();
+        if (currentLine) mathLines.push(currentLine);
+        i++;
+      } else {
+        if (currentLine) mathLines.push(currentLine);
+        i++;
+        while (i < lines.length && !lines[i].trim().endsWith("\\]") && !lines[i].trim().endsWith("$$")) {
+          mathLines.push(lines[i]);
+          i++;
+        }
+        if (i < lines.length) {
+          const closing = lines[i].replace(/\\\]$|\$\$$/, "").trim();
+          if (closing) mathLines.push(closing);
+          i++;
+        }
+      }
+
+      const rawFormula = mathLines.join(" ");
+      const formula = cleanMathText(rawFormula);
+      if (formula) {
+        elements.push(
+          <div
+            key={`math-${i}`}
+            className="my-3 p-3 rounded-2xl bg-[#007AFF]/5 border border-[#007AFF]/20 text-[#007AFF] font-mono text-xs sm:text-sm font-semibold overflow-x-auto text-center shadow-2xs select-text cursor-text"
+          >
+            {formula}
+          </div>
+        );
+      }
+      continue;
+    }
 
     if (line.startsWith("#### ")) {
       elements.push(<h4 key={i}>{renderInline(line.slice(5))}</h4>);
@@ -87,7 +146,7 @@ function RenderMarkdown({ text }: { text: string }) {
       }
       i++;
       elements.push(
-        <pre key={`code-${i}`}>
+        <pre key={`code-${i}`} className="select-text cursor-text">
           <code>{codeLines.join("\n")}</code>
         </pre>
       );
@@ -96,7 +155,9 @@ function RenderMarkdown({ text }: { text: string }) {
 
     if (line.startsWith("> ")) {
       elements.push(
-        <blockquote key={i}>{renderInline(line.slice(2))}</blockquote>
+        <blockquote key={i} className="select-text cursor-text">
+          {renderInline(line.slice(2))}
+        </blockquote>
       );
       i++;
       continue;
@@ -111,7 +172,9 @@ function RenderMarkdown({ text }: { text: string }) {
       elements.push(
         <ol key={`ol-${i}`}>
           {items.map((item, idx) => (
-            <li key={idx}>{renderInline(item)}</li>
+            <li key={idx} className="select-text cursor-text">
+              {renderInline(item)}
+            </li>
           ))}
         </ol>
       );
@@ -127,7 +190,9 @@ function RenderMarkdown({ text }: { text: string }) {
       elements.push(
         <ul key={`ul-${i}`}>
           {items.map((item, idx) => (
-            <li key={idx}>{renderInline(item)}</li>
+            <li key={idx} className="select-text cursor-text">
+              {renderInline(item)}
+            </li>
           ))}
         </ul>
       );
@@ -139,22 +204,27 @@ function RenderMarkdown({ text }: { text: string }) {
       continue;
     }
 
-    elements.push(<p key={i}>{renderInline(line)}</p>);
+    elements.push(
+      <p key={i} className="select-text cursor-text">
+        {renderInline(line)}
+      </p>
+    );
     i++;
   }
 
-  return <div className="ai-response">{elements}</div>;
+  return <div className="ai-response select-text cursor-text">{elements}</div>;
 }
 
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
+  const cleanedText = cleanMathText(text);
   const regex = /(\*\*.*?\*\*|`[^`]+`|\*[^*]+\*)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
 
-  while ((match = regex.exec(text)) !== null) {
+  while ((match = regex.exec(cleanedText)) !== null) {
     if (match.index > lastIndex) {
-      parts.push(text.slice(lastIndex, match.index));
+      parts.push(cleanedText.slice(lastIndex, match.index));
     }
     const token = match[0];
     if (token.startsWith("**") && token.endsWith("**")) {
@@ -166,15 +236,48 @@ function renderInline(text: string): React.ReactNode[] {
     }
     lastIndex = match.index + token.length;
   }
-  if (lastIndex < text.length) {
-    parts.push(text.slice(lastIndex));
+  if (lastIndex < cleanedText.length) {
+    parts.push(cleanedText.slice(lastIndex));
   }
   return parts;
 }
 
 /* ════════════════════════════════════════════════════════════
+   COPY BUTTON COMPONENT
+   ════════════════════════════════════════════════════════════ */
+function CopyButton({ textToCopy }: { textToCopy: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-semibold bg-slate-100 hover:bg-slate-200 text-slate-600 transition cursor-pointer"
+      title="Copy Message Text"
+    >
+      {copied ? (
+        <>
+          <Check className="h-3 w-3 text-emerald-600 stroke-[3]" />
+          <span className="text-emerald-600 font-bold">Copied!</span>
+        </>
+      ) : (
+        <>
+          <Copy className="h-3 w-3" />
+          <span>Copy</span>
+        </>
+      )}
+    </button>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════
    PROMINENT INLINE FIGURE DISPLAY
-   Renders actual diagrams & figures prominently under the answer
    ════════════════════════════════════════════════════════════ */
 function FigureGallery({ urls }: { urls: string[] }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -356,7 +459,7 @@ function DebugPanel({
 }
 
 /* ════════════════════════════════════════════════════════════
-   MAIN PAGE — Claude Hover Three-Dots Menu + Inline Rename
+   MAIN PAGE
    ════════════════════════════════════════════════════════════ */
 export default function Page() {
   const [sessionId, setSessionId] = useState("");
@@ -392,23 +495,28 @@ export default function Page() {
     loadThreadsList();
   }, []);
 
-  useEffect(() => {
-    if (sessionId) {
-      refreshDocuments();
+  const refreshDocumentsForSession = useCallback(async (sid: string) => {
+    if (!sid) return;
+    try {
+      const docs = await listDocuments(sid);
+      setDocuments(docs);
+    } catch (err) {
+      console.error("Failed to fetch documents:", err);
     }
-  }, [sessionId]);
+  }, []);
 
   useEffect(() => {
     if (activeThreadId) {
+      setSessionId(activeThreadId);
       loadThreadData(activeThreadId);
+      refreshDocumentsForSession(activeThreadId);
     }
-  }, [activeThreadId]);
+  }, [activeThreadId, refreshDocumentsForSession]);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
-  // Close three dots dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = () => setActiveMenuThreadId(null);
     window.addEventListener("click", handleClickOutside);
@@ -438,19 +546,6 @@ export default function Page() {
     }
   };
 
-  const refreshDocuments = async () => {
-    if (!sessionId) return;
-    try {
-      const docs = await listDocuments(sessionId);
-      setDocuments(docs);
-      if (selectedDocs.length === 0) {
-        setSelectedDocs(docs.map((d) => d.doc_name));
-      }
-    } catch (err) {
-      console.error("Failed to fetch documents:", err);
-    }
-  };
-
   const toggleDoc = (name: string) => {
     setSelectedDocs((prev) =>
       prev.includes(name) ? prev.filter((d) => d !== name) : [...prev, name]
@@ -460,7 +555,7 @@ export default function Page() {
   const handleDeleteDoc = async (name: string) => {
     try {
       await deleteDocument(sessionId, name);
-      await refreshDocuments();
+      await refreshDocumentsForSession(sessionId);
     } catch (err) {
       console.error("Failed to delete:", err);
     }
@@ -488,7 +583,7 @@ export default function Page() {
       setUploadError(null);
       try {
         await uploadDocuments(sessionId, fileArray);
-        await refreshDocuments();
+        await refreshDocumentsForSession(sessionId);
         setShowUploadModal(false);
       } catch (err: any) {
         setUploadError(err.message || "Failed to process files.");
@@ -496,7 +591,7 @@ export default function Page() {
         setIsUploading(false);
       }
     },
-    [sessionId]
+    [sessionId, refreshDocumentsForSession]
   );
 
   /* ─── GLOBAL CLIPBOARD PASTE LISTENER (Ctrl+V / Cmd+V) ─── */
@@ -607,6 +702,8 @@ export default function Page() {
       setActiveThreadId(newTh.id);
       setSessionId(newTh.id);
       setMessages([]);
+      setDocuments([]);
+      setSelectedDocs([]);
       loadThreadsList();
     } catch (err) {
       console.error("Failed to create thread:", err);
@@ -649,7 +746,7 @@ export default function Page() {
 
   return (
     <div
-      className="flex h-screen w-full bg-[#f6f5f0] text-[#1c1c1e] overflow-hidden relative select-none"
+      className="flex h-screen w-full bg-[#f6f5f0] text-[#1c1c1e] overflow-hidden relative"
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
@@ -697,7 +794,7 @@ export default function Page() {
         className="hidden"
       />
 
-      {/* ─── CLAUDE-STYLE SIDEBAR WITH HOVER THREE-DOTS MENU ─── */}
+      {/* ─── CLAUDE-STYLE SIDEBAR ─── */}
       <AnimatePresence>
         {isSidebarOpen && (
           <motion.aside
@@ -758,7 +855,6 @@ export default function Page() {
                       onClick={() => {
                         if (!isEditing) {
                           setActiveThreadId(th.id);
-                          setSessionId(th.id);
                         }
                       }}
                       className={`group relative flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs transition cursor-pointer ${
@@ -787,7 +883,7 @@ export default function Page() {
                         )}
                       </div>
 
-                      {/* Claude Style Three Dots Menu Button (Appears on hover or when open) */}
+                      {/* Three Dots Menu Button (Reveals on Hover) */}
                       {!isEditing && (
                         <div className="relative shrink-0">
                           <button
@@ -803,7 +899,7 @@ export default function Page() {
                             <MoreHorizontal className="h-4 w-4" />
                           </button>
 
-                          {/* Dropdown Menu (Rename / Delete) */}
+                          {/* Dropdown Menu */}
                           {isMenuOpen && (
                             <div
                               onClick={(e) => e.stopPropagation()}
@@ -883,7 +979,7 @@ export default function Page() {
         )}
       </AnimatePresence>
 
-      {/* ─── FLOATING TOP PILL CONTROLS (Includes + New Thread next to Files) ─── */}
+      {/* ─── FLOATING TOP PILL CONTROLS ─── */}
       <div className="absolute top-4 right-6 z-30 flex items-center gap-2">
         <button
           onClick={handleNewChat}
@@ -995,7 +1091,7 @@ export default function Page() {
                             <FileText className="h-4.5 w-4.5 text-[#007AFF] shrink-0" />
                           )}
                           <div className="min-w-0">
-                            <span className="text-xs font-semibold text-slate-800 truncate block">
+                            <span className="text-xs font-semibold text-slate-800 truncate block select-text cursor-text">
                               {doc.doc_name}
                             </span>
                             <span className="text-[10px] text-slate-400">
@@ -1097,23 +1193,29 @@ export default function Page() {
                   }`}
                 >
                   {msg.sender === "user" ? (
-                    <div className="max-w-[85%] bg-[#007AFF] text-white px-5 py-3 rounded-3xl rounded-br-lg shadow-ios-sm">
-                      <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                    <div className="group relative max-w-[85%] bg-[#007AFF] text-white px-5 py-3 rounded-3xl rounded-br-lg shadow-ios-sm select-text cursor-text">
+                      <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-medium select-text cursor-text">
                         {msg.text}
                       </p>
+                      <div className="mt-1.5 flex justify-end opacity-90 group-hover:opacity-100 transition-opacity">
+                        <CopyButton textToCopy={msg.text} />
+                      </div>
                     </div>
                   ) : (
                     <div className="max-w-full w-full">
-                      <div className="flex items-center gap-2 mb-2 px-1">
-                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#007AFF] to-sky-400 flex items-center justify-center shadow-xs">
-                          <Sparkles className="h-3 w-3 text-white" />
+                      <div className="flex items-center justify-between mb-2 px-1">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#007AFF] to-sky-400 flex items-center justify-center shadow-xs">
+                            <Sparkles className="h-3 w-3 text-white" />
+                          </div>
+                          <span className="text-xs font-bold text-slate-500 font-mono">
+                            RAG Assistant • {msg.timestamp}
+                          </span>
                         </div>
-                        <span className="text-xs font-bold text-slate-500 font-mono">
-                          RAG Assistant • {msg.timestamp}
-                        </span>
+                        <CopyButton textToCopy={msg.text} />
                       </div>
 
-                      <div className="ios-card rounded-3xl p-6 border border-black/5 shadow-ios-md">
+                      <div className="ios-card rounded-3xl p-6 border border-black/5 shadow-ios-md select-text cursor-text">
                         <RenderMarkdown text={msg.text} />
 
                         {/* Display Prominent Inline Images */}
@@ -1188,7 +1290,7 @@ export default function Page() {
                         ) : (
                           <FileText className="h-3 w-3 text-[#007AFF]" />
                         )}
-                        <span className="font-medium truncate max-w-[130px]">{doc}</span>
+                        <span className="font-medium truncate max-w-[130px] select-text cursor-text">{doc}</span>
                         <button
                           onClick={() => toggleDoc(doc)}
                           className="text-slate-400 hover:text-slate-700 rounded-full p-0.5"
