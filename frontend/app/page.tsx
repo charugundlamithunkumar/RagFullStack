@@ -34,7 +34,8 @@ import {
 import type { DocumentInfo, ChatMessage, DebugChunk } from "@/lib/types";
 
 /* ════════════════════════════════════════════════════════════
-   MARKDOWN RENDERER — High contrast text, highlighted headings
+   MARKDOWN RENDERER — High Readability
+   Headings & Bold terms in Blue (#007AFF)
    ════════════════════════════════════════════════════════════ */
 function RenderMarkdown({ text }: { text: string }) {
   const lines = text.split("\n");
@@ -337,7 +338,7 @@ function DebugPanel({
 }
 
 /* ════════════════════════════════════════════════════════════
-   MAIN PAGE
+   MAIN PAGE — Tom & Jerry Background (No top bar)
    ════════════════════════════════════════════════════════════ */
 export default function Page() {
   const [sessionId, setSessionId] = useState("");
@@ -486,42 +487,41 @@ export default function Page() {
 
   return (
     <div
-      className="flex flex-col h-screen w-full bg-[#f6f6f2] text-[#1c1c1e] overflow-hidden relative select-none"
+      className="flex flex-col h-screen w-full bg-[#f8f6f0] text-[#1c1c1e] overflow-hidden relative select-none"
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
       onDrop={handleDrop}
     >
-      {/* ─── TOM AND JERRY PLAYFUL CARTOON BACKGROUND ARTWORK ─── */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {/* Right Corner Peeking Mouse Character (User provided image) */}
-        <div className="absolute -right-6 bottom-16 sm:bottom-24 w-52 sm:w-80 h-auto opacity-90 transition-transform hover:scale-105">
-          <img
-            src="/jerry_peeking.png"
-            alt="Jerry Cartoon Character Peeking"
-            className="w-full h-auto drop-shadow-md"
-          />
-        </div>
+      {/* ─── TOM AND JERRY BACKGROUND ILLUSTRATIONS ALL OVER THE SCREEN ─── */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-85">
+        {/* Bottom Right Jerry Peeking */}
+        <img
+          src="/jerry.png"
+          alt="Jerry character"
+          className="absolute -bottom-6 -right-6 w-72 sm:w-96 max-w-none object-contain drop-shadow-xl z-0"
+        />
 
-        {/* Left Corner Top Peeking Mouse Character (Flipped) */}
-        <div className="absolute -left-10 top-12 w-40 sm:w-60 h-auto opacity-40 scale-x-[-1] pointer-events-none">
-          <img
-            src="/jerry_peeking.png"
-            alt="Jerry Cartoon Peeking Left"
-            className="w-full h-auto"
-          />
-        </div>
+        {/* Top Left Floating Jerry */}
+        <img
+          src="/jerry.png"
+          alt="Jerry character top left"
+          className="absolute -top-12 -left-10 w-64 sm:w-80 max-w-none object-contain opacity-35 transform -scale-x-100 rotate-12 drop-shadow-md z-0"
+        />
 
-        {/* Floating Cartoon Cheese & Mouse Hole Decorative Elements */}
-        <div className="absolute top-20 right-1/4 opacity-30 text-amber-500 font-bold text-3xl font-mono animate-bounce">
-          🧀
-        </div>
-        <div className="absolute bottom-32 left-10 opacity-30 text-amber-500 font-bold text-4xl animate-pulse">
-          🐾
-        </div>
-        <div className="absolute top-1/3 left-6 opacity-20 text-slate-700 font-extrabold text-2xl font-sans">
-          ⚡
-        </div>
+        {/* Top Right Floating Jerry */}
+        <img
+          src="/jerry.png"
+          alt="Jerry character top right"
+          className="absolute -top-10 -right-10 w-56 sm:w-72 max-w-none object-contain opacity-30 transform rotate-45 drop-shadow-md z-0"
+        />
+
+        {/* Bottom Left Floating Jerry */}
+        <img
+          src="/jerry.png"
+          alt="Jerry character bottom left"
+          className="absolute -bottom-10 -left-10 w-64 sm:w-80 max-w-none object-contain opacity-40 transform -rotate-12 drop-shadow-md z-0"
+        />
       </div>
 
       {/* Hidden file input */}
@@ -561,13 +561,13 @@ export default function Page() {
         )}
       </AnimatePresence>
 
-      {/* ─── FLOATING TOP CONTROLS (Top Header Bar Removed as requested!) ─── */}
+      {/* ─── FLOATING TOP PILL CONTROLS (Top Bar Removed) ─── */}
       <div className="absolute top-4 right-6 z-30 flex items-center gap-2">
         {hasMessages && (
           <button
             onClick={handleNewChat}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/80 hover:bg-white backdrop-blur-md text-slate-700 transition cursor-pointer shadow-ios-sm border border-black/5"
-            title="Start New Chat Session"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-md hover:bg-white text-slate-700 shadow-ios-sm border border-black/10 transition cursor-pointer"
+            title="Start New Thread"
           >
             <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
             <span>New Thread</span>
@@ -576,10 +576,10 @@ export default function Page() {
 
         <button
           onClick={() => setShowDocDrawer((d) => !d)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition cursor-pointer shadow-ios-sm backdrop-blur-md ${
+          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer shadow-ios-sm ${
             showDocDrawer
               ? "bg-[#007AFF] text-white"
-              : "bg-white/80 hover:bg-white border border-black/10 text-slate-700"
+              : "bg-white/90 backdrop-blur-md border border-black/10 text-slate-700 hover:bg-white"
           }`}
         >
           <FileText className="h-3.5 w-3.5" />
@@ -593,7 +593,7 @@ export default function Page() {
 
         <button
           onClick={() => setShowUploadModal(true)}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white text-xs font-semibold transition cursor-pointer shadow-ios-sm"
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white text-xs font-semibold transition cursor-pointer shadow-ios-sm"
         >
           <Plus className="h-4 w-4 stroke-[2.5]" />
           <span>Add PDF</span>
@@ -610,14 +610,14 @@ export default function Page() {
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden bg-white/95 backdrop-blur-xl border-b border-black/10 z-20 shrink-0 shadow-ios-md relative"
           >
-            <div className="max-w-3xl mx-auto p-5 space-y-4">
-              <div className="flex items-center justify-between pt-2">
+            <div className="max-w-3xl mx-auto p-5 pt-14 sm:pt-5 space-y-4">
+              <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
-                    Indexed PDF Documents
+                    Active Document Knowledge Base
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Select which PDFs to ground your answers from.
+                    Select PDFs to retrieve context from during queries.
                   </p>
                 </div>
                 <button
@@ -703,9 +703,9 @@ export default function Page() {
 
       {/* ─── MAIN CHAT CANVAS ─── */}
       <div className="flex-1 flex flex-col overflow-hidden relative z-10">
-        <div className="flex-1 overflow-y-auto px-4 py-8">
-          <div className="max-w-3xl mx-auto space-y-6">
-            {/* Landing State */}
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          <div className="max-w-3xl mx-auto space-y-6 pt-4">
+            {/* Landing State (When empty) */}
             {!hasMessages && (
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
@@ -713,27 +713,22 @@ export default function Page() {
                 transition={{ duration: 0.4 }}
                 className="flex flex-col items-center justify-center pt-[14vh] pb-8 text-center space-y-6"
               >
-                {/* Center Icon */}
-                <div className="relative">
-                  <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[#007AFF] to-sky-400 flex items-center justify-center shadow-ios-md">
-                    <Sparkles className="h-10 w-10 text-white" />
-                  </div>
-                  <div className="absolute -bottom-1 -right-1 w-8 h-8 rounded-2xl bg-amber-400 flex items-center justify-center shadow-sm">
-                    <FileText className="h-4.5 w-4.5 text-white" />
-                  </div>
+                {/* Center Sparkle Badge */}
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[#007AFF] to-sky-400 flex items-center justify-center shadow-ios-md">
+                  <Sparkles className="h-10 w-10 text-white" />
                 </div>
 
-                <div className="space-y-2 max-w-md bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-black/5 shadow-ios-sm">
-                  <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-                    RAG Knowledge Assistant
+                <div className="space-y-2 max-w-md">
+                  <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+                    Multimodal RAG Knowledge Assistant
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
                     Search and synthesize information directly from your uploaded PDF documents. Headings and key terms are highlighted cleanly for fast reading.
                   </p>
                 </div>
 
-                {/* Suggestion Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
+                {/* Prompt Template Pill Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg pt-2">
                   {[
                     "Summarize key conclusions",
                     "List core metrics & findings",
@@ -746,7 +741,7 @@ export default function Page() {
                         setInputText(suggestion);
                         inputRef.current?.focus();
                       }}
-                      className="p-3.5 rounded-2xl bg-white/80 hover:bg-white backdrop-blur-md border border-black/5 hover:border-[#007AFF]/40 text-left text-xs font-semibold text-slate-700 shadow-ios-sm transition cursor-pointer flex items-center justify-between group"
+                      className="p-3.5 rounded-2xl bg-white/90 backdrop-blur-md hover:bg-white border border-black/5 hover:border-[#007AFF]/40 text-left text-xs font-semibold text-slate-800 shadow-ios-sm transition cursor-pointer flex items-center justify-between group"
                     >
                       <span>{suggestion}</span>
                       <ArrowUp className="h-3.5 w-3.5 text-[#007AFF] opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -757,7 +752,7 @@ export default function Page() {
                 {documents.length === 0 && (
                   <button
                     onClick={() => setShowUploadModal(true)}
-                    className="mt-2 flex items-center gap-2 px-6 py-3 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white font-semibold text-xs transition cursor-pointer shadow-ios-md"
+                    className="mt-4 flex items-center gap-2 px-6 py-3 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white font-semibold text-xs transition cursor-pointer shadow-ios-md"
                   >
                     <FileUp className="h-4 w-4" />
                     Upload your first PDF
@@ -766,7 +761,7 @@ export default function Page() {
               </motion.div>
             )}
 
-            {/* Messages */}
+            {/* Thread Messages */}
             <AnimatePresence>
               {messages.map((msg) => (
                 <motion.div
@@ -816,7 +811,7 @@ export default function Page() {
               ))}
             </AnimatePresence>
 
-            {/* Thinking indicator */}
+            {/* Thinking Indicator */}
             {isLoading && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
@@ -860,7 +855,7 @@ export default function Page() {
                   selectedDocs.map((doc) => (
                     <span
                       key={doc}
-                      className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-black/10 rounded-full px-3 py-1 text-xs text-slate-700 shadow-ios-sm"
+                      className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-black/10 rounded-full px-3 py-1 text-xs text-slate-800 shadow-ios-sm"
                     >
                       <FileText className="h-3 w-3 text-[#007AFF]" />
                       <span className="font-medium truncate max-w-[130px]">{doc}</span>
@@ -876,7 +871,7 @@ export default function Page() {
               </div>
             )}
 
-            {/* Input Capsule Bar */}
+            {/* Floating Input Capsule Bar */}
             <form onSubmit={handleSend} className="relative flex items-center">
               <div className="flex-1 flex items-center ios-glass border border-black/10 rounded-full shadow-ios-lg focus-within:border-[#007AFF] focus-within:ring-2 focus-within:ring-[#007AFF]/20 transition-all pl-2 pr-2 py-1.5">
                 <button
