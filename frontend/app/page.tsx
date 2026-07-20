@@ -491,6 +491,7 @@ export default function Page() {
   return (
     <div
       className="flex flex-col h-screen w-full bg-[#f7f7f5] text-[#37352f] overflow-hidden relative"
+      style={{ backgroundImage: "url('/images/tom-jerry-pattern.png')", backgroundSize: '400px', backgroundRepeat: 'repeat', backgroundBlendMode: 'soft-light', backgroundPosition: 'center' }}
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
@@ -516,14 +517,16 @@ export default function Page() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-md"
+            className="absolute inset-0 z-50 flex items-center justify-center bg-[#f7f7f5]/95 backdrop-blur-md"
           >
             <div className="flex flex-col items-center gap-4">
-              <div className="p-5 bg-[#e8f0fe] rounded-full animate-bounce">
-                <FileUp className="h-10 w-10 text-[#2383e2]" />
-              </div>
+              <img
+                src="/images/tom-jerry-empty.png"
+                alt="Tom & Jerry"
+                className="w-40 h-40 object-contain animate-bounce drop-shadow-lg"
+              />
               <h3 className="text-xl font-bold text-[#37352f]">
-                Drop your PDF to index it
+                Drop your PDF — Tom & Jerry will index it!
               </h3>
               <p className="text-sm text-[#6b6b60]">
                 Text, figures, and captions will be extracted and indexed
@@ -536,9 +539,11 @@ export default function Page() {
       {/* ─── SLIM TOP BAR ─── */}
       <header className="h-12 shrink-0 border-b border-[#e8e8e5] bg-white/80 backdrop-blur-md flex items-center justify-between px-5 z-10">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2383e2] to-[#6366f1] flex items-center justify-center">
-            <Sparkles className="h-4 w-4 text-white" />
-          </div>
+          <img
+            src="/images/tom-jerry-search.png"
+            alt="Logo"
+            className="w-8 h-8 rounded-lg object-cover border border-[#e8e8e5] shadow-sm"
+          />
           <span className="font-bold text-[#37352f] text-sm tracking-tight">
             Multimodal RAG
           </span>
@@ -583,7 +588,11 @@ export default function Page() {
                   onClick={() => setShowUploadModal(true)}
                   className="p-6 rounded-xl border-2 border-dashed border-[#e8e8e5] hover:border-[#2383e2] flex flex-col items-center gap-2 cursor-pointer transition"
                 >
-                  <FileUp className="h-6 w-6 text-[#9b9b93]" />
+                  <img
+                    src="/images/tom-jerry-empty.png"
+                    alt="No documents"
+                    className="w-20 h-20 object-contain opacity-80"
+                  />
                   <span className="text-sm font-medium text-[#6b6b60]">
                     No documents yet — click to upload a PDF
                   </span>
@@ -655,11 +664,16 @@ export default function Page() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className="flex flex-col items-center justify-center pt-[12vh] pb-8 text-center"
+                className="flex flex-col items-center justify-center pt-[8vh] pb-8 text-center"
               >
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2383e2] to-[#6366f1] flex items-center justify-center mb-6 shadow-lg">
-                  <Sparkles className="h-8 w-8 text-white" />
-                </div>
+                <motion.img
+                  src="/images/tom-jerry-hero.png"
+                  alt="Tom & Jerry AI Assistant"
+                  className="w-56 h-56 object-contain mb-6 drop-shadow-lg"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5, delay: 0.1 }}
+                />
                 <h1 className="text-3xl font-extrabold tracking-tight text-[#37352f] mb-2">
                   Ask your documents anything
                 </h1>
@@ -682,7 +696,7 @@ export default function Page() {
                         setInputText(suggestion);
                         inputRef.current?.focus();
                       }}
-                      className="px-4 py-2 rounded-full border border-[#e8e8e5] bg-white hover:bg-[#f7f7f5] hover:border-[#d3d3d0] text-sm text-[#6b6b60] hover:text-[#37352f] transition cursor-pointer"
+                      className="px-4 py-2 rounded-full border border-[#e8e8e5] bg-white/80 backdrop-blur-sm hover:bg-white hover:border-[#d3d3d0] text-sm text-[#6b6b60] hover:text-[#37352f] transition cursor-pointer shadow-sm"
                     >
                       {suggestion}
                     </button>
@@ -725,9 +739,11 @@ export default function Page() {
                     <div className="max-w-full">
                       {/* AI label */}
                       <div className="flex items-center gap-2 mb-2">
-                        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#2383e2] to-[#6366f1] flex items-center justify-center">
-                          <Sparkles className="h-3 w-3 text-white" />
-                        </div>
+                        <img
+                          src="/images/tom-jerry-search.png"
+                          alt="AI"
+                          className="w-6 h-6 rounded-lg object-cover border border-[#e8e8e5]"
+                        />
                         <span className="text-xs font-semibold text-[#9b9b93]">
                           AI · {msg.timestamp}
                         </span>
@@ -762,9 +778,11 @@ export default function Page() {
                 animate={{ opacity: 1, y: 0 }}
                 className="flex items-center gap-2 mb-6"
               >
-                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#2383e2] to-[#6366f1] flex items-center justify-center">
-                  <Sparkles className="h-3 w-3 text-white" />
-                </div>
+                <img
+                  src="/images/tom-jerry-search.png"
+                  alt="AI thinking"
+                  className="w-6 h-6 rounded-lg object-cover border border-[#e8e8e5] animate-pulse"
+                />
                 <div className="bg-white rounded-2xl rounded-tl-md border border-[#e8e8e5] px-5 py-3.5 shadow-sm flex items-center gap-3">
                   <div className="flex gap-1">
                     <span className="thinking-dot w-2 h-2 rounded-full bg-[#2383e2]" />
