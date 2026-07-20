@@ -10,12 +10,19 @@ async function handle<T>(res: Response): Promise<T> {
   return res.json();
 }
 
-export async function uploadDocument(sessionId: string, file: File): Promise<UploadResponse> {
+export async function uploadDocuments(sessionId: string, files: File[]): Promise<UploadResponse[]> {
   const form = new FormData();
   form.append("session_id", sessionId);
-  form.append("file", file);
+  for (const f of files) {
+    form.append("files", f);
+  }
   const res = await fetch(`${API_BASE}/documents/upload`, { method: "POST", body: form });
-  return handle<UploadResponse>(res);
+  return handle<UploadResponse[]>(res);
+}
+
+export async function uploadDocument(sessionId: string, file: File): Promise<UploadResponse> {
+  const res = await uploadDocuments(sessionId, [file]);
+  return res[0];
 }
 
 export async function listDocuments(sessionId: string): Promise<DocumentInfo[]> {

@@ -26,7 +26,7 @@ import {
 import { getSessionId } from "@/lib/session";
 import {
   listDocuments,
-  uploadDocument,
+  uploadDocuments,
   deleteDocument,
   askQuestion,
   figureUrl,
@@ -171,7 +171,7 @@ function FigureGallery({ urls }: { urls: string[] }) {
     <div className="mt-4 pt-3.5 border-t border-slate-100">
       <div className="flex items-center gap-1.5 text-xs font-semibold text-[#007AFF] mb-2.5">
         <ImageIcon className="h-3.5 w-3.5" />
-        <span>Extracted Diagrams ({urls.length})</span>
+        <span>Extracted & Ingested Images ({urls.length})</span>
       </div>
       <div className="grid grid-cols-2 gap-3">
         {urls.map((url, idx) => {
@@ -185,7 +185,7 @@ function FigureGallery({ urls }: { urls: string[] }) {
               <div className="aspect-video flex items-center justify-center p-2.5">
                 <img
                   src={full}
-                  alt={`Extracted Figure ${idx + 1}`}
+                  alt={`Extracted Image ${idx + 1}`}
                   className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                 />
@@ -196,7 +196,7 @@ function FigureGallery({ urls }: { urls: string[] }) {
                 </div>
               </div>
               <div className="px-3 pb-2 text-[11px] font-medium text-slate-500 flex justify-between">
-                <span>Figure {idx + 1}</span>
+                <span>Image #{idx + 1}</span>
                 <span className="text-slate-400">Tap to expand</span>
               </div>
             </div>
@@ -272,7 +272,7 @@ function DebugPanel({
           {routedDocs.length > 0 && (
             <div>
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">
-                Routed PDF Documents
+                Routed PDF & Image Documents
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {routedDocs.map((doc, idx) => (
@@ -338,7 +338,7 @@ function DebugPanel({
 }
 
 /* ════════════════════════════════════════════════════════════
-   MAIN PAGE — Tom & Jerry Fullscreen Wallpaper & Cutouts
+   MAIN PAGE — Multi-File & Image Support + Tom & Jerry Pattern
    ════════════════════════════════════════════════════════════ */
 export default function Page() {
   const [sessionId, setSessionId] = useState("");
@@ -395,20 +395,31 @@ export default function Page() {
     }
   };
 
-  const handleUpload = async (file: File) => {
-    if (!file || !sessionId) return;
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      setUploadError("Only PDF files are supported.");
+  const handleUploadFiles = async (files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (!fileArray.length || !sessionId) return;
+
+    const allowedExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tiff"];
+    const invalidFiles = fileArray.filter((f) => {
+      const ext = f.name.substring(f.name.lastIndexOf(".")).toLowerCase();
+      return !allowedExtensions.includes(ext);
+    });
+
+    if (invalidFiles.length > 0) {
+      setUploadError(
+        `Unsupported format for ${invalidFiles.map((f) => f.name).join(", ")}. Allowed: PDF, PNG, JPG, WEBP.`
+      );
       return;
     }
+
     setIsUploading(true);
     setUploadError(null);
     try {
-      await uploadDocument(sessionId, file);
+      await uploadDocuments(sessionId, fileArray);
       await refreshDocuments();
       setShowUploadModal(false);
     } catch (err: any) {
-      setUploadError(err.message || "Upload failed.");
+      setUploadError(err.message || "Failed to process files.");
     } finally {
       setIsUploading(false);
     }
@@ -424,8 +435,9 @@ export default function Page() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    const file = e.dataTransfer.files?.[0];
-    if (file) handleUpload(file);
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      handleUploadFiles(e.dataTransfer.files);
+    }
   };
 
   const handleSend = async (e?: React.FormEvent) => {
@@ -485,6 +497,11 @@ export default function Page() {
 
   const hasMessages = messages.length > 0;
 
+  const isImageFile = (docName: string) => {
+    const ext = docName.substring(docName.lastIndexOf(".")).toLowerCase();
+    return [".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tiff"].includes(ext);
+  };
+
   return (
     <div
       className="flex flex-col h-screen w-full bg-[#f6f5f0] text-[#1c1c1e] overflow-hidden relative select-none"
@@ -498,28 +515,21 @@ export default function Page() {
 
       {/* ─── FLOATING JERRY CHARACTER CUTOUTS IN CORNERS ─── */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
-        {/* Bottom Right Jerry Peeking */}
         <img
           src="/jerry.png"
           alt="Jerry character bottom right"
           className="absolute -bottom-4 -right-4 w-72 sm:w-96 max-w-none object-contain z-0 drop-shadow-lg"
         />
-
-        {/* Bottom Left Jerry Peeking */}
         <img
           src="/jerry.png"
           alt="Jerry character bottom left"
           className="absolute -bottom-6 -left-6 w-64 sm:w-80 max-w-none object-contain transform -scale-x-100 z-0 drop-shadow-lg"
         />
-
-        {/* Top Right Jerry Peeking */}
         <img
           src="/jerry.png"
           alt="Jerry character top right"
           className="absolute -top-8 -right-8 w-56 sm:w-72 max-w-none object-contain transform rotate-45 z-0 drop-shadow-md"
         />
-
-        {/* Top Left Jerry Peeking */}
         <img
           src="/jerry.png"
           alt="Jerry character top left"
@@ -527,16 +537,18 @@ export default function Page() {
         />
       </div>
 
-      {/* Hidden file input */}
+      {/* Hidden file input supporting MULTIPLE files & IMAGES */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) handleUpload(f);
+          if (e.target.files && e.target.files.length > 0) {
+            handleUploadFiles(e.target.files);
+          }
           e.target.value = "";
         }}
-        accept=".pdf"
+        accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.gif,.tiff"
+        multiple
         className="hidden"
       />
 
@@ -554,17 +566,17 @@ export default function Page() {
                 <FileUp className="h-10 w-10 text-[#007AFF]" />
               </div>
               <h3 className="text-xl font-bold text-slate-900">
-                Drop PDF to Ingest & Index
+                Drop Multiple PDFs or Images to Ingest
               </h3>
               <p className="text-sm text-slate-500 font-medium">
-                Extracts text, associates figures, and embeds for RAG retrieval
+                Supports multiple PDFs and images (PNG, JPG, WEBP)
               </p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* ─── FLOATING TOP PILL CONTROLS (Top Bar Removed) ─── */}
+      {/* ─── FLOATING TOP PILL CONTROLS ─── */}
       <div className="absolute top-4 right-6 z-30 flex items-center gap-2">
         {hasMessages && (
           <button
@@ -586,7 +598,7 @@ export default function Page() {
           }`}
         >
           <FileText className="h-3.5 w-3.5" />
-          <span>Documents ({documents.length})</span>
+          <span>Files ({documents.length})</span>
           <ChevronDown
             className={`h-3 w-3 transition-transform ${
               showDocDrawer ? "rotate-180" : ""
@@ -599,7 +611,7 @@ export default function Page() {
           className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white text-xs font-semibold transition cursor-pointer shadow-ios-sm"
         >
           <Plus className="h-4 w-4 stroke-[2.5]" />
-          <span>Add PDF</span>
+          <span>Add Files</span>
         </button>
       </div>
 
@@ -617,10 +629,10 @@ export default function Page() {
               <div className="flex items-center justify-between">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
-                    Active Document Knowledge Base
+                    Active Knowledge Base (PDFs & Images)
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Select PDFs to retrieve context from during queries.
+                    Select PDFs or images to retrieve context from during queries.
                   </p>
                 </div>
                 <button
@@ -628,7 +640,7 @@ export default function Page() {
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#007AFF]/10 text-[#007AFF] hover:bg-[#007AFF]/20 text-xs font-bold transition cursor-pointer"
                 >
                   <FileUp className="h-3.5 w-3.5" />
-                  Upload PDF Document
+                  Upload Files
                 </button>
               </div>
 
@@ -639,16 +651,17 @@ export default function Page() {
                 >
                   <FileUp className="h-8 w-8 text-[#007AFF]" />
                   <span className="text-sm font-semibold text-slate-700">
-                    No indexed PDFs in this workspace session
+                    No indexed PDFs or images in this workspace session
                   </span>
                   <span className="text-xs text-slate-400">
-                    Click here to upload your first document
+                    Click here to upload multiple files at once
                   </span>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-64 overflow-y-auto pr-1">
                   {documents.map((doc) => {
                     const selected = selectedDocs.includes(doc.doc_name);
+                    const isImg = isImageFile(doc.doc_name);
                     return (
                       <div
                         key={doc.doc_name}
@@ -671,16 +684,18 @@ export default function Page() {
                               <Check className="h-3 w-3 text-white stroke-[3]" />
                             )}
                           </div>
-                          <FileText className="h-4.5 w-4.5 text-[#007AFF] shrink-0" />
+                          {isImg ? (
+                            <ImageIcon className="h-4.5 w-4.5 text-pink-500 shrink-0" />
+                          ) : (
+                            <FileText className="h-4.5 w-4.5 text-[#007AFF] shrink-0" />
+                          )}
                           <div className="min-w-0">
                             <span className="text-xs font-semibold text-slate-800 truncate block">
                               {doc.doc_name}
                             </span>
-                            {doc.scanned_warning && (
-                              <span className="text-[10px] text-amber-600 font-medium">
-                                Low OCR text warning
-                              </span>
-                            )}
+                            <span className="text-[10px] text-slate-400">
+                              {isImg ? "Image Document" : "PDF Document"}
+                            </span>
                           </div>
                         </div>
 
@@ -690,7 +705,7 @@ export default function Page() {
                             handleDeleteDoc(doc.doc_name);
                           }}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition cursor-pointer"
-                          title="Delete PDF"
+                          title="Delete File"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -726,7 +741,7 @@ export default function Page() {
                     Multimodal RAG Knowledge Assistant
                   </h2>
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                    Search and synthesize information directly from your uploaded PDF documents. Headings and key terms are highlighted cleanly for fast reading.
+                    Upload multiple PDFs or images. Synthesize text and retrieve visual diagrams with CLIP vector search.
                   </p>
                 </div>
 
@@ -758,7 +773,7 @@ export default function Page() {
                     className="mt-4 flex items-center gap-2 px-6 py-3 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white font-semibold text-xs transition cursor-pointer shadow-ios-md"
                   >
                     <FileUp className="h-4 w-4" />
-                    Upload your first PDF
+                    Upload PDFs or Images
                   </button>
                 )}
               </motion.div>
@@ -852,24 +867,31 @@ export default function Page() {
                 </span>
                 {selectedDocs.length === 0 ? (
                   <span className="text-[11px] text-amber-600 flex items-center gap-1 font-medium">
-                    <Info className="h-3 w-3" /> Select PDFs from Documents drawer
+                    <Info className="h-3 w-3" /> Select files from Documents drawer
                   </span>
                 ) : (
-                  selectedDocs.map((doc) => (
-                    <span
-                      key={doc}
-                      className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-black/10 rounded-full px-3 py-1 text-xs text-slate-800 shadow-ios-sm"
-                    >
-                      <FileText className="h-3 w-3 text-[#007AFF]" />
-                      <span className="font-medium truncate max-w-[130px]">{doc}</span>
-                      <button
-                        onClick={() => toggleDoc(doc)}
-                        className="text-slate-400 hover:text-slate-700 rounded-full p-0.5"
+                  selectedDocs.map((doc) => {
+                    const isImg = isImageFile(doc);
+                    return (
+                      <span
+                        key={doc}
+                        className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-black/10 rounded-full px-3 py-1 text-xs text-slate-800 shadow-ios-sm"
                       >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </span>
-                  ))
+                        {isImg ? (
+                          <ImageIcon className="h-3 w-3 text-pink-500" />
+                        ) : (
+                          <FileText className="h-3 w-3 text-[#007AFF]" />
+                        )}
+                        <span className="font-medium truncate max-w-[130px]">{doc}</span>
+                        <button
+                          onClick={() => toggleDoc(doc)}
+                          className="text-slate-400 hover:text-slate-700 rounded-full p-0.5"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    );
+                  })
                 )}
               </div>
             )}
@@ -881,7 +903,7 @@ export default function Page() {
                   type="button"
                   onClick={() => setShowUploadModal(true)}
                   className="p-2.5 text-slate-400 hover:text-[#007AFF] rounded-full hover:bg-slate-100/80 transition cursor-pointer shrink-0"
-                  title="Attach PDF Document"
+                  title="Attach PDFs or Images"
                 >
                   <Paperclip className="h-5 w-5" />
                 </button>
@@ -893,8 +915,8 @@ export default function Page() {
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder={
                     documents.length === 0
-                      ? "Attach a PDF to ask questions..."
-                      : "Ask a question about your PDF documents..."
+                      ? "Attach PDFs or images to ask questions..."
+                      : "Ask a question about your uploaded documents..."
                   }
                   disabled={isLoading}
                   className="flex-1 bg-transparent py-2 px-2 border-none outline-none focus:ring-0 text-slate-900 text-xs sm:text-sm placeholder:text-slate-400 min-w-0 font-sans"
@@ -917,7 +939,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* ─── PDF UPLOAD MODAL ─── */}
+      {/* ─── UPLOAD MODAL (MULTIPLE FILES & IMAGES) ─── */}
       <AnimatePresence>
         {showUploadModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
@@ -934,10 +956,10 @@ export default function Page() {
                   </div>
                   <div>
                     <h3 className="font-bold text-slate-900 text-sm">
-                      Upload Knowledge PDF
+                      Upload PDFs & Images
                     </h3>
                     <p className="text-xs text-slate-400">
-                      Extract text chunks & figures for indexing
+                      Select single or multiple files at once
                     </p>
                   </div>
                 </div>
@@ -968,17 +990,17 @@ export default function Page() {
                     <FileUp className="h-8 w-8" />
                   </div>
                   <p className="text-xs sm:text-sm font-semibold text-slate-800">
-                    Click to browse or drag PDF file here
+                    Click to select multiple files or drag & drop
                   </p>
                   <p className="text-[11px] text-slate-400 mt-1">
-                    PDF files up to 100 pages
+                    Supports PDF, PNG, JPG, JPEG, WEBP, BMP, GIF
                   </p>
                 </div>
 
                 {isUploading && (
                   <div className="flex items-center justify-center gap-2 text-xs font-semibold text-[#007AFF] py-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Processing text, figures & building FAISS index...</span>
+                    <span>Processing text & image vectors into FAISS index...</span>
                   </div>
                 )}
 
