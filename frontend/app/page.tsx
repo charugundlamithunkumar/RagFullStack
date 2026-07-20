@@ -338,7 +338,7 @@ function DebugPanel({
 }
 
 /* ════════════════════════════════════════════════════════════
-   MAIN PAGE — Tom & Jerry Background (No top bar)
+   MAIN PAGE — Tom & Jerry Character Background
    ════════════════════════════════════════════════════════════ */
 export default function Page() {
   const [sessionId, setSessionId] = useState("");
@@ -487,40 +487,40 @@ export default function Page() {
 
   return (
     <div
-      className="flex flex-col h-screen w-full bg-[#f8f6f0] text-[#1c1c1e] overflow-hidden relative select-none"
+      className="flex flex-col h-screen w-full bg-[#f6f5f0] text-[#1c1c1e] overflow-hidden relative select-none"
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
       onDrop={handleDrop}
     >
-      {/* ─── TOM AND JERRY BACKGROUND ILLUSTRATIONS ALL OVER THE SCREEN ─── */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden opacity-85">
+      {/* ─── TOM AND JERRY CARTOON CHARACTERS FLOATING IN THE BACKGROUND ─── */}
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         {/* Bottom Right Jerry Peeking */}
         <img
           src="/jerry.png"
-          alt="Jerry character"
-          className="absolute -bottom-6 -right-6 w-72 sm:w-96 max-w-none object-contain drop-shadow-xl z-0"
+          alt="Jerry character bottom right"
+          className="absolute -bottom-4 -right-4 w-72 sm:w-96 max-w-none object-contain z-0"
         />
 
-        {/* Top Left Floating Jerry */}
-        <img
-          src="/jerry.png"
-          alt="Jerry character top left"
-          className="absolute -top-12 -left-10 w-64 sm:w-80 max-w-none object-contain opacity-35 transform -scale-x-100 rotate-12 drop-shadow-md z-0"
-        />
-
-        {/* Top Right Floating Jerry */}
-        <img
-          src="/jerry.png"
-          alt="Jerry character top right"
-          className="absolute -top-10 -right-10 w-56 sm:w-72 max-w-none object-contain opacity-30 transform rotate-45 drop-shadow-md z-0"
-        />
-
-        {/* Bottom Left Floating Jerry */}
+        {/* Bottom Left Jerry Peeking */}
         <img
           src="/jerry.png"
           alt="Jerry character bottom left"
-          className="absolute -bottom-10 -left-10 w-64 sm:w-80 max-w-none object-contain opacity-40 transform -rotate-12 drop-shadow-md z-0"
+          className="absolute -bottom-6 -left-6 w-64 sm:w-80 max-w-none object-contain transform -scale-x-100 z-0 opacity-90"
+        />
+
+        {/* Top Right Jerry Peeking */}
+        <img
+          src="/jerry.png"
+          alt="Jerry character top right"
+          className="absolute -top-8 -right-8 w-56 sm:w-72 max-w-none object-contain transform rotate-45 z-0 opacity-80"
+        />
+
+        {/* Top Left Jerry Peeking */}
+        <img
+          src="/jerry.png"
+          alt="Jerry character top left"
+          className="absolute -top-8 -left-8 w-60 sm:w-72 max-w-none object-contain transform -rotate-45 z-0 opacity-80"
         />
       </div>
 
@@ -566,7 +566,7 @@ export default function Page() {
         {hasMessages && (
           <button
             onClick={handleNewChat}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/90 backdrop-blur-md hover:bg-white text-slate-700 shadow-ios-sm border border-black/10 transition cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-md hover:bg-white text-slate-700 shadow-ios-sm border border-black/10 transition cursor-pointer"
             title="Start New Thread"
           >
             <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
@@ -579,7 +579,7 @@ export default function Page() {
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer shadow-ios-sm ${
             showDocDrawer
               ? "bg-[#007AFF] text-white"
-              : "bg-white/90 backdrop-blur-md border border-black/10 text-slate-700 hover:bg-white"
+              : "bg-white/95 backdrop-blur-md border border-black/10 text-slate-700 hover:bg-white"
           }`}
         >
           <FileText className="h-3.5 w-3.5" />
@@ -741,7 +741,7 @@ export default function Page() {
                         setInputText(suggestion);
                         inputRef.current?.focus();
                       }}
-                      className="p-3.5 rounded-2xl bg-white/90 backdrop-blur-md hover:bg-white border border-black/5 hover:border-[#007AFF]/40 text-left text-xs font-semibold text-slate-800 shadow-ios-sm transition cursor-pointer flex items-center justify-between group"
+                      className="p-3.5 rounded-2xl bg-white/95 backdrop-blur-md hover:bg-white border border-black/5 hover:border-[#007AFF]/40 text-left text-xs font-semibold text-slate-800 shadow-ios-sm transition cursor-pointer flex items-center justify-between group"
                     >
                       <span>{suggestion}</span>
                       <ArrowUp className="h-3.5 w-3.5 text-[#007AFF] opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -855,7 +855,7 @@ export default function Page() {
                   selectedDocs.map((doc) => (
                     <span
                       key={doc}
-                      className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-black/10 rounded-full px-3 py-1 text-xs text-slate-800 shadow-ios-sm"
+                      className="inline-flex items-center gap-1.5 bg-white/95 backdrop-blur-md border border-black/10 rounded-full px-3 py-1 text-xs text-slate-800 shadow-ios-sm"
                     >
                       <FileText className="h-3 w-3 text-[#007AFF]" />
                       <span className="font-medium truncate max-w-[130px]">{doc}</span>
