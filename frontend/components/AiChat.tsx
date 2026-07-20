@@ -10,6 +10,8 @@ import {
   FileText,
   X,
   Info,
+  FileUp,
+  Plus
 } from "lucide-react";
 import type { ChatMessage, DocumentInfo } from "@/lib/types";
 import FigureGallery from "./FigureGallery";
@@ -24,7 +26,9 @@ interface AiChatProps {
   selectedDocs: string[];
   documents: DocumentInfo[];
   onToggleDoc: (docName: string) => void;
-  onOpenUpload: () => void;
+  onTriggerFileUpload: () => void;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+  onFileInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 export default function AiChat({
@@ -36,7 +40,9 @@ export default function AiChat({
   selectedDocs,
   documents,
   onToggleDoc,
-  onOpenUpload,
+  onTriggerFileUpload,
+  fileInputRef,
+  onFileInputChange,
 }: AiChatProps) {
   const chatBottomRef = useRef<HTMLDivElement>(null);
 
@@ -44,49 +50,81 @@ export default function AiChat({
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
+  // Formats markdown into clean, readable React elements with light-blue headings & highlighted terms
   const renderFormattedMarkdown = (text: string) => {
     return text.split("\n\n").map((block, bIdx) => {
       const trimmed = block.trim();
+
+      // Heading detection (# ## ### or lines ending with :)
+      if (/^#{1,3}\s/.test(trimmed)) {
+        const headingText = trimmed.replace(/^#{1,3}\s+/, "");
+        return (
+          <h3
+            key={bIdx}
+            className="text-base sm:text-lg font-bold text-sky-600 mt-4 mb-2 tracking-tight flex items-center gap-2 font-display"
+          >
+            <span className="w-1.5 h-4 bg-sky-500 rounded-full inline-block"></span>
+            {renderInlineFormatting(headingText)}
+          </h3>
+        );
+      }
+
+      // Numbered List detection (1. 2. 3.)
       if (/^\d+\.\s/.test(trimmed)) {
         const lines = block.split("\n");
         return (
-          <ol key={bIdx} className="list-decimal pl-5 space-y-1.5 my-2 text-slate-700">
-            {lines.map((line, lIdx) => (
-              <li key={lIdx} className="text-xs sm:text-sm leading-relaxed">
-                {renderInlineFormatting(line.replace(/^\d+\.\s+/, ""))}
-              </li>
-            ))}
+          <ol key={bIdx} className="list-decimal pl-5 space-y-2 my-2 text-slate-800">
+            {lines.map((line, lIdx) => {
+              const cleanLine = line.replace(/^\d+\.\s+/, "");
+              return (
+                <li key={lIdx} className="text-sm sm:text-[15px] leading-relaxed">
+                  {renderInlineFormatting(cleanLine)}
+                </li>
+              );
+            })}
           </ol>
         );
       }
+
+      // Unordered List detection (- or *)
       if (trimmed.startsWith("- ") || trimmed.startsWith("* ")) {
         const lines = block.split("\n");
         return (
-          <ul key={bIdx} className="list-disc pl-5 space-y-1.5 my-2 text-slate-700">
-            {lines.map((line, lIdx) => (
-              <li key={lIdx} className="text-xs sm:text-sm leading-relaxed">
-                {renderInlineFormatting(line.replace(/^[-*]\s+/, ""))}
-              </li>
-            ))}
+          <ul key={bIdx} className="list-disc pl-5 space-y-1.5 my-2 text-slate-800">
+            {lines.map((line, lIdx) => {
+              const cleanLine = line.replace(/^[-*]\s+/, "");
+              return (
+                <li key={lIdx} className="text-sm sm:text-[15px] leading-relaxed">
+                  {renderInlineFormatting(cleanLine)}
+                </li>
+              );
+            })}
           </ul>
         );
       }
+
+      // Regular Paragraph
       return (
-        <p key={bIdx} className="text-xs sm:text-sm leading-relaxed my-2">
+        <p key={bIdx} className="text-sm sm:text-[15px] leading-relaxed my-2 text-slate-800">
           {renderInlineFormatting(block)}
         </p>
       );
     });
   };
 
+  // Inline formatting parser: highlights **bold terms** in light blue badge
   const renderInlineFormatting = (line: string) => {
     const parts = line.split(/(\*\*.*?\*\*)/g);
     return parts.map((part, idx) => {
       if (part.startsWith("**") && part.endsWith("**")) {
+        const content = part.slice(2, -2);
         return (
-          <strong key={idx} className="font-bold text-indigo-600">
-            {part.slice(2, -2)}
-          </strong>
+          <span
+            key={idx}
+            className="inline-block bg-sky-50 text-sky-700 font-bold px-1.5 py-0.5 rounded border border-sky-200/80 mx-0.5 text-xs sm:text-sm"
+          >
+            {content}
+          </span>
         );
       }
       return part;
@@ -94,133 +132,93 @@ export default function AiChat({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden font-sans relative">
-      {/* SCROLLABLE CHAT CHRONICLE AREA */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+    <div className="flex-1 flex flex-col h-full overflow-hidden font-sans relative bg-[#fcfcfb]">
+      {/* Hidden File Input mapped directly to paperclip */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={onFileInputChange}
+        accept=".pdf"
+        className="hidden"
+      />
+
+      {/* CHAT MESSAGES SCROLLABLE AREA */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
         <div className="max-w-3xl mx-auto space-y-6">
-          {/* AI CARDS PROMPT LANDING WHEN EMPTY */}
+          {/* EMPTY STATE LANDING */}
           {messages.length === 0 && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-6 pt-4"
+              className="py-12 px-4 flex flex-col items-center justify-center text-center space-y-5"
             >
+              <div className="w-14 h-14 rounded-2xl bg-sky-50 border border-sky-200/80 flex items-center justify-center text-sky-600 shadow-xs">
+                <Sparkles className="h-7 w-7" />
+              </div>
               <div>
-                <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 font-display">
-                  AI where your team works.
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight font-display">
+                  Ask AI anything across your PDFs
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-500 mt-1 font-medium">
-                  Search across workspace PDF documents, synthesize knowledge, and extract visual figures instantly.
+                <p className="text-xs sm:text-sm text-slate-500 max-w-md mt-1.5 leading-relaxed font-medium">
+                  Upload PDF documents to index text & figures, attach them to your query, and receive grounded answers with citations.
                 </p>
               </div>
 
-              {/* DUAL CARDS GRID FROM IMAGE 2 */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* CARD 1: CAPTURE KNOWLEDGE */}
-                <motion.div
-                  whileHover={{ y: -4 }}
-                  className="bg-sky-50 border border-sky-200/80 rounded-3xl p-5 relative overflow-hidden flex flex-col justify-between shadow-2xs group"
+              {/* QUICK STARTER PROMPTS */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-lg w-full pt-2">
+                <button
+                  onClick={() => setInputText("What are the main findings of the uploaded document?")}
+                  className="p-3 bg-white hover:bg-sky-50/50 border border-slate-200/80 hover:border-sky-300 rounded-2xl text-left transition shadow-2xs group cursor-pointer"
                 >
-                  <div className="space-y-1 mb-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-sky-700 font-mono">
-                      Capture knowledge
-                    </span>
-                    <h3 className="text-base font-bold text-slate-900 leading-snug">
-                      Bring everything into one system of record.
-                    </h3>
-                  </div>
+                  <span className="text-xs font-bold text-sky-700 block">Summarize PDF</span>
+                  <span className="text-xs text-slate-500 block truncate">"What are the main findings?"</span>
+                </button>
 
-                  {/* MINI MEETING BOARD PREVIEW */}
-                  <div className="bg-white rounded-2xl p-3 border border-sky-200/60 shadow-xs space-y-2">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
-                      <span className="flex items-center gap-1">🎙️ Meetings</span>
-                      <span className="text-[10px] text-slate-400 font-mono">4 notes</span>
-                    </div>
-                    <div className="space-y-1.5 text-[11px]">
-                      <div className="flex items-center justify-between p-1.5 bg-slate-50 rounded-lg">
-                        <span className="font-semibold text-slate-800 truncate">Technical Design Review</span>
-                        <span className="px-1.5 py-0.5 bg-rose-100 text-rose-700 rounded text-[9px] font-bold">Infra</span>
-                      </div>
-                      <div className="flex items-center justify-between p-1.5 bg-slate-50 rounded-lg">
-                        <span className="font-semibold text-slate-800 truncate">Engineering Standup</span>
-                        <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[9px] font-bold">Mobile</span>
-                      </div>
-                    </div>
-                    {/* AUDIO PLAYER PILL */}
-                    <div className="bg-slate-900 text-white rounded-full px-3 py-1.5 flex items-center justify-between text-[10px] shadow-sm">
-                      <span className="font-medium truncate">Technical Design Review</span>
-                      <span className="font-mono text-emerald-400">||||||||| ⏸ 🔴</span>
-                    </div>
-                  </div>
-                </motion.div>
-
-                {/* CARD 2: FIND ANSWERS */}
-                <motion.div
-                  whileHover={{ y: -4 }}
-                  className="bg-rose-50 border border-rose-200/80 rounded-3xl p-5 relative overflow-hidden flex flex-col justify-between shadow-2xs group"
+                <button
+                  onClick={() => setInputText("Explain the figures and diagrams in the document.")}
+                  className="p-3 bg-white hover:bg-sky-50/50 border border-slate-200/80 hover:border-sky-300 rounded-2xl text-left transition shadow-2xs group cursor-pointer"
                 >
-                  <div className="space-y-1 mb-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-rose-700 font-mono">
-                      Find answers
-                    </span>
-                    <h3 className="text-base font-bold text-slate-900 leading-snug">
-                      Get answers, instantly—with citations.
-                    </h3>
-                  </div>
-
-                  {/* DASHBOARD PREVIEW WITH FLOATING PROMPT PILL */}
-                  <div className="bg-white rounded-2xl p-3 border border-rose-200/60 shadow-xs space-y-2">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-700">
-                      <span className="flex items-center gap-1">🏆 H2 Deal Flow Dashboard</span>
-                      <span className="text-[9px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-mono font-bold">Syncing</span>
-                    </div>
-                    <div className="h-16 bg-slate-50 rounded-xl flex items-end justify-around p-2 border border-slate-100">
-                      <div className="w-3 bg-amber-400 h-8 rounded-t"></div>
-                      <div className="w-3 bg-blue-500 h-12 rounded-t"></div>
-                      <div className="w-3 bg-emerald-500 h-10 rounded-t"></div>
-                      <div className="w-3 bg-rose-500 h-14 rounded-t"></div>
-                    </div>
-                    {/* FLOATING PROMPT PILL */}
-                    <div
-                      onClick={() => setInputText("What are our biggest opportunities in H2?")}
-                      className="bg-white border border-slate-200 hover:border-indigo-400 rounded-full px-3 py-1.5 flex items-center justify-between text-[11px] text-slate-700 shadow-2xs cursor-pointer transition"
-                    >
-                      <span className="truncate">What are our biggest opportunities in H2?</span>
-                      <div className="w-5 h-5 rounded-full bg-blue-600 text-white flex items-center justify-center shrink-0">
-                        <ArrowUp className="h-3 w-3 stroke-[3]" />
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
+                  <span className="text-xs font-bold text-sky-700 block">Extract Figures</span>
+                  <span className="text-xs text-slate-500 block truncate">"Explain figures & diagrams"</span>
+                </button>
               </div>
+
+              {/* DIRECT UPLOAD BUTTON */}
+              <button
+                onClick={onTriggerFileUpload}
+                className="inline-flex items-center space-x-2 px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+              >
+                <Plus className="h-4 w-4" />
+                <span>Upload New PDF Document</span>
+              </button>
             </motion.div>
           )}
 
-          {/* MESSAGES CHRONICLE TURNS */}
+          {/* CHAT MESSAGES CHRONICLE */}
           <AnimatePresence>
             {messages.map((msg) => (
               <motion.div
                 key={msg.id}
-                initial={{ opacity: 0, y: 15 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.18 }}
                 className={`flex flex-col ${
                   msg.sender === "user" ? "items-end" : "items-start"
                 }`}
               >
                 <div
-                  className={`max-w-[90%] rounded-2xl p-4 shadow-2xs ${
+                  className={`max-w-[92%] sm:max-w-[85%] rounded-2xl p-5 shadow-2xs ${
                     msg.sender === "user"
                       ? "bg-slate-900 text-white rounded-tr-none border border-slate-950"
-                      : "bg-white text-slate-800 rounded-tl-none border border-slate-200/80"
+                      : "bg-white text-slate-800 rounded-tl-none border border-slate-200/90"
                   }`}
                 >
                   {msg.sender === "user" ? (
-                    <p className="text-xs sm:text-sm whitespace-pre-wrap leading-relaxed">
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium">
                       {msg.text}
                     </p>
                   ) : (
-                    <div className="space-y-1.5">
+                    <div className="space-y-2">
                       {renderFormattedMarkdown(msg.text)}
 
                       {/* Figure Gallery */}
@@ -239,7 +237,7 @@ export default function AiChat({
                   )}
                 </div>
 
-                <span className="text-[10px] text-slate-400 font-medium mt-1 mx-1.5 flex items-center space-x-1 font-mono">
+                <span className="text-[10px] text-slate-400 font-medium mt-1 mx-2 flex items-center space-x-1 font-mono">
                   <Clock className="h-2.5 w-2.5 text-slate-300" />
                   <span>{msg.timestamp}</span>
                 </span>
@@ -250,12 +248,12 @@ export default function AiChat({
           {/* LOADING SPINNER */}
           {isLoading && (
             <motion.div
-              initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="flex items-center space-x-2 text-xs text-slate-600 bg-white p-3.5 rounded-2xl border border-slate-200/80 shadow-2xs w-fit"
+              className="flex items-center space-x-2 text-xs font-semibold text-slate-700 bg-white p-4 rounded-2xl border border-slate-200/90 shadow-2xs w-fit"
             >
-              <Sparkles className="h-4 w-4 text-indigo-600 animate-spin" />
-              <span className="font-medium">Synthesizing grounded answer with citations...</span>
+              <Sparkles className="h-4 w-4 text-sky-600 animate-spin" />
+              <span>Synthesizing answer from grounded PDF context...</span>
             </motion.div>
           )}
 
@@ -263,66 +261,68 @@ export default function AiChat({
         </div>
       </div>
 
-      {/* FLOATING INPUT BAR */}
-      <div className="p-4 bg-white/80 backdrop-blur-md border-t border-[#e8e8e5] shrink-0">
+      {/* FLOATING PROMPT INPUT BAR AT BOTTOM */}
+      <div className="p-4 bg-white/90 backdrop-blur-md border-t border-slate-200/80 shrink-0">
         <div className="max-w-3xl mx-auto space-y-2">
           {/* ATTACHED CONTEXT BADGES */}
           <div className="flex flex-wrap gap-1.5 min-h-[26px] items-center">
             {selectedDocs.length > 0 ? (
               <>
                 <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest font-mono mr-1">
-                  Attached context ({selectedDocs.length}):
+                  Attached PDFs ({selectedDocs.length}):
                 </span>
                 {selectedDocs.map((doc) => (
                   <div
                     key={doc}
-                    className="inline-flex items-center space-x-1.5 bg-slate-100 border border-slate-200/80 rounded-lg px-2 py-0.5 text-[11px] text-slate-700"
+                    className="inline-flex items-center space-x-1.5 bg-sky-50 border border-sky-200/80 rounded-lg px-2.5 py-1 text-xs text-sky-900 font-medium"
                   >
-                    <FileText className="h-3 w-3 text-indigo-500" />
-                    <span className="font-semibold truncate max-w-[160px]">{doc}</span>
+                    <FileText className="h-3.5 w-3.5 text-sky-600" />
+                    <span className="font-semibold truncate max-w-[180px]">{doc}</span>
                     <button
                       onClick={() => onToggleDoc(doc)}
-                      className="text-slate-400 hover:text-slate-600 p-0.5 rounded hover:bg-slate-200"
+                      className="text-sky-400 hover:text-sky-700 ml-1 p-0.5 rounded hover:bg-sky-100 transition cursor-pointer"
+                      title="De-attach document"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-3 w-3 stroke-[2.5]" />
                     </button>
                   </div>
                 ))}
               </>
             ) : (
-              <span className="text-[11px] text-slate-400 flex items-center italic">
-                <Info className="h-3.5 w-3.5 mr-1" /> No PDF context attached. Select files in sidebar or upload.
+              <span className="text-[11px] text-amber-700 flex items-center font-medium">
+                <Info className="h-3.5 w-3.5 mr-1 text-amber-500" /> No PDF attached. Click paperclip or select PDF in sidebar.
               </span>
             )}
           </div>
 
-          {/* INPUT BAR FORM */}
+          {/* INPUT FORM PILL */}
           <form onSubmit={onSendMessage} className="relative flex items-center">
-            <div className="relative flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-full shadow-2xs focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/10 transition pr-2 pl-4">
+            <div className="relative flex-1 flex items-center bg-slate-50 border border-slate-200 rounded-2xl shadow-2xs focus-within:border-sky-500 focus-within:ring-2 focus-within:ring-sky-500/15 transition pr-2 pl-3">
+              {/* PAPERCLIP DIRECT PDF UPLOAD TRIGGER */}
               <button
                 type="button"
-                onClick={onOpenUpload}
-                className="p-2 -ml-1 text-slate-400 hover:text-indigo-600 rounded-full hover:bg-slate-100 transition cursor-pointer shrink-0"
-                title="Upload PDF document"
+                onClick={onTriggerFileUpload}
+                className="p-2 text-slate-400 hover:text-sky-600 rounded-xl hover:bg-slate-200/60 transition cursor-pointer shrink-0 flex items-center space-x-1"
+                title="Attach & Upload PDF Document"
               >
-                <Paperclip className="h-4.5 w-4.5" />
+                <Paperclip className="h-5 w-5" />
               </button>
 
               <input
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                placeholder="Ask a question or search with AI..."
+                placeholder="Ask a question across selected PDFs..."
                 disabled={isLoading}
-                className="flex-1 bg-transparent py-3 px-3 border-none outline-none focus:ring-0 text-slate-800 text-xs sm:text-sm placeholder:text-slate-400 min-w-0 font-sans"
+                className="flex-1 bg-transparent py-3 px-3 border-none outline-none focus:ring-0 text-slate-800 text-sm placeholder:text-slate-400 min-w-0 font-sans"
               />
 
               <button
                 type="submit"
                 disabled={!inputText.trim() || isLoading}
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-white transition ${
+                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-white transition ${
                   inputText.trim() && !isLoading
-                    ? "bg-indigo-600 hover:bg-indigo-500 hover:scale-105 cursor-pointer shadow-2xs"
+                    ? "bg-sky-600 hover:bg-sky-500 hover:scale-105 cursor-pointer shadow-xs"
                     : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
                 }`}
               >

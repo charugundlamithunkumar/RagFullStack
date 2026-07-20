@@ -6,10 +6,8 @@ import {
   FileText,
   X,
   AlertCircle,
-  Sparkles,
   FileUp,
   Loader2,
-  LayoutGrid,
 } from "lucide-react";
 import { getSessionId } from "@/lib/session";
 import { listDocuments, uploadDocument, deleteDocument, askQuestion } from "@/lib/api";
@@ -17,9 +15,7 @@ import type { DocumentInfo, ChatMessage } from "@/lib/types";
 
 import Header from "@/components/Header";
 import Sidebar from "@/components/Sidebar";
-import BoardView from "@/components/BoardView";
 import AiChat from "@/components/AiChat";
-import CommandKModal from "@/components/CommandKModal";
 
 export default function Page() {
   const [sessionId, setSessionId] = useState<string>("");
@@ -32,10 +28,7 @@ export default function Page() {
   const [isUploading, setIsUploading] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [isCommandKOpen, setIsCommandKOpen] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
-
-  const [activeView, setActiveView] = useState<"board" | "chat">("chat");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -74,13 +67,14 @@ export default function Page() {
       {
         id: "msg-welcome-2",
         sender: "assistant",
-        text: `Welcome to **Ramp HQ AI Workspace**!
+        text: `### Multimodal RAG Pipeline Overview
 
-A Multimodal RAG (Retrieval-Augmented Generation) system typically includes:
-1. **Ingestion & Indexing Pipeline**: Processes documents (PDFs, text, figures) and stores them in a vector database.
-2. **Retriever & RRF Fusion**: Finds relevant text & figure chunks based on user query and fuses scores.
-3. **Cross-Modality Reranker**: Reranks top candidates to keep grounded context concise.
-4. **Generator**: Large Language Model synthesizes the answer, grounding it strictly in retrieved context.`,
+A **Multimodal RAG** (Retrieval-Augmented Generation) system includes:
+
+1. **Ingestion & Indexing Pipeline**: Extracts document text with **PyMuPDF / pdfplumber**, extracts figures, and stores text in **FAISS** vector database while figures are embedded with **OpenAI CLIP**.
+2. **Hybrid Search & RRF Fusion**: Retrieves text and image candidates using **Reciprocal Rank Fusion** (RRF).
+3. **Cross-Modality Reranker**: Reranks top chunks with **min_per_doc protection** to prevent crowding out.
+4. **LLM Synthesis**: Grounded responses are generated using **Groq**, outputting concise answers with **citations** and **figures**.`,
         timestamp: time,
       },
     ]);
@@ -113,12 +107,14 @@ A Multimodal RAG (Retrieval-Augmented Generation) system typically includes:
     setIsUploading(true);
     setUploadError(null);
     try {
-      await uploadDocument(sessionId, file);
+      const res = await uploadDocument(sessionId, file);
       await refreshDocuments();
+      setSelectedDocs((prev) => Array.from(new Set([...prev, res.doc_name])));
       setIsUploadModalOpen(false);
     } catch (err: any) {
       console.error("Upload error:", err);
       setUploadError(err.message || "Failed to process and index PDF.");
+      setIsUploadModalOpen(true);
     } finally {
       setIsUploading(false);
     }
@@ -165,7 +161,6 @@ A Multimodal RAG (Retrieval-Augmented Generation) system typically includes:
 
     setMessages((prev) => [...prev, userMsg]);
     setIsLoading(true);
-    setActiveView("chat");
 
     try {
       const res = await askQuestion(sessionId, userQuery, selectedDocs);
@@ -195,31 +190,16 @@ A Multimodal RAG (Retrieval-Augmented Generation) system typically includes:
 
   const handleNewChat = () => {
     setMessages([]);
-    setActiveView("chat");
-  };
-
-  const handleAskBoardQuery = (query: string) => {
-    setInputText(query);
-    setActiveView("chat");
   };
 
   return (
     <div
-      className="flex h-screen w-full overflow-hidden bg-[#ffffff] text-[#1a1a1a] font-sans antialiased select-none relative"
+      className="flex h-screen w-full overflow-hidden bg-white text-[#1a1a1a] font-sans antialiased select-none relative"
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
       onDrop={handleDrop}
     >
-      {/* Hidden File Input */}
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileInputChange}
-        accept=".pdf"
-        className="hidden"
-      />
-
       {/* DRAG AND DROP OVERLAY */}
       <AnimatePresence>
         {dragActive && (
@@ -230,8 +210,8 @@ A Multimodal RAG (Retrieval-Augmented Generation) system typically includes:
             className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/95 backdrop-blur-md text-slate-800 pointer-events-none"
           >
             <div className="flex flex-col items-center space-y-4">
-              <div className="rounded-full bg-indigo-50 border border-indigo-100 p-6 animate-bounce shadow-xs">
-                <FileUp className="h-12 w-12 text-indigo-600" />
+              <div className="rounded-full bg-sky-50 border border-sky-100 p-6 animate-bounce shadow-xs">
+                <FileUp className="h-12 w-12 text-sky-600" />
               </div>
               <h3 className="text-2xl font-bold tracking-tight text-slate-900">
                 Drop your PDF file to index it
@@ -253,101 +233,36 @@ A Multimodal RAG (Retrieval-Augmented Generation) system typically includes:
         onToggleDoc={toggleDocSelection}
         onDeleteDoc={handleDeleteDocument}
         onOpenUpload={() => setIsUploadModalOpen(true)}
-        onOpenCommandK={() => setIsCommandKOpen(true)}
         onNewChat={handleNewChat}
       />
 
       {/* MAIN WORKSPACE AREA */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-white">
-        {/* TOP HEADER */}
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#fcfcfb]">
+        {/* HEADER */}
         <Header
           isSidebarOpen={isSidebarOpen}
           onToggleSidebar={() => setIsSidebarOpen(true)}
-          activeView={activeView}
-          onSelectView={setActiveView}
-          onOpenCommandK={() => setIsCommandKOpen(true)}
+          attachedDocCount={selectedDocs.length}
+          onOpenUpload={() => setIsUploadModalOpen(true)}
         />
 
-        {/* HERO HEADER */}
-        <div className="p-6 pb-2 border-b border-[#ecece9] flex items-center justify-between shrink-0">
-          <div className="flex items-center space-x-4">
-            <div className="w-14 h-14 rounded-full bg-[#f4f4f2] border border-[#e5e5e2] flex items-center justify-center text-2xl shadow-2xs font-mono">
-              🌙
-            </div>
-            <div>
-              <h1 className="text-3xl font-black tracking-tight text-slate-900 font-display">
-                Ramp HQ
-              </h1>
-              <p className="text-xs text-slate-400 font-medium">
-                AI Workspace & Multimodal RAG Engine
-              </p>
-            </div>
-          </div>
-
-          {/* VIEW SWITCHER TABS */}
-          <div className="flex items-center space-x-1 bg-[#f4f4f2] p-1 rounded-xl border border-[#e5e5e2]">
-            <button
-              onClick={() => setActiveView("board")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                activeView === "board"
-                  ? "bg-white text-slate-900 shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-              <span>Company tasks</span>
-            </button>
-
-            <button
-              onClick={() => setActiveView("chat")}
-              className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                activeView === "chat"
-                  ? "bg-white text-indigo-600 shadow-2xs"
-                  : "text-slate-500 hover:text-slate-800"
-              }`}
-            >
-              <Sparkles className="h-3.5 w-3.5 text-indigo-500" />
-              <span>AI Chat</span>
-            </button>
-          </div>
-        </div>
-
-        {/* WORKSPACE VIEW CONTENT */}
+        {/* AI CHAT VIEW */}
         <div className="flex-1 overflow-hidden relative">
-          {activeView === "board" ? (
-            <BoardView
-              documents={documents}
-              selectedDocs={selectedDocs}
-              onToggleDoc={toggleDocSelection}
-              onOpenUpload={() => setIsUploadModalOpen(true)}
-              onAskDocQuery={handleAskBoardQuery}
-            />
-          ) : (
-            <AiChat
-              messages={messages}
-              isLoading={isLoading}
-              inputText={inputText}
-              setInputText={setInputText}
-              onSendMessage={handleSendMessage}
-              selectedDocs={selectedDocs}
-              documents={documents}
-              onToggleDoc={toggleDocSelection}
-              onOpenUpload={() => setIsUploadModalOpen(true)}
-            />
-          )}
+          <AiChat
+            messages={messages}
+            isLoading={isLoading}
+            inputText={inputText}
+            setInputText={setInputText}
+            onSendMessage={handleSendMessage}
+            selectedDocs={selectedDocs}
+            documents={documents}
+            onToggleDoc={toggleDocSelection}
+            onTriggerFileUpload={() => fileInputRef.current?.click()}
+            fileInputRef={fileInputRef}
+            onFileInputChange={handleFileInputChange}
+          />
         </div>
       </div>
-
-      {/* COMMAND K MODAL */}
-      <CommandKModal
-        isOpen={isCommandKOpen}
-        onClose={() => setIsCommandKOpen(false)}
-        documents={documents}
-        selectedDocs={selectedDocs}
-        onToggleDoc={toggleDocSelection}
-        onSelectQuery={handleAskBoardQuery}
-        onOpenUpload={() => setIsUploadModalOpen(true)}
-      />
 
       {/* UPLOAD DOCUMENT MODAL */}
       <AnimatePresence>
@@ -361,7 +276,7 @@ A Multimodal RAG (Retrieval-Augmented Generation) system typically includes:
             >
               <div className="flex items-center justify-between p-5 border-b border-slate-100 bg-slate-50/50">
                 <div className="flex items-center space-x-2.5">
-                  <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
+                  <div className="p-2 bg-sky-50 text-sky-600 rounded-xl border border-sky-100">
                     <FileText className="h-5 w-5" />
                   </div>
                   <div>
@@ -390,9 +305,9 @@ A Multimodal RAG (Retrieval-Augmented Generation) system typically includes:
 
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-slate-300 hover:border-indigo-500 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-indigo-50/20 transition group"
+                  className="border-2 border-dashed border-slate-300 hover:border-sky-500 rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-sky-50/20 transition group"
                 >
-                  <div className="p-4 bg-indigo-50 rounded-full text-indigo-600 group-hover:scale-110 transition-transform mb-3">
+                  <div className="p-4 bg-sky-50 rounded-full text-sky-600 group-hover:scale-110 transition-transform mb-3">
                     <FileUp className="h-8 w-8" />
                   </div>
                   <p className="text-sm font-semibold text-slate-800">
@@ -402,7 +317,7 @@ A Multimodal RAG (Retrieval-Augmented Generation) system typically includes:
                 </div>
 
                 {isUploading && (
-                  <div className="flex items-center justify-center space-x-2 text-xs font-semibold text-indigo-600 py-2">
+                  <div className="flex items-center justify-center space-x-2 text-xs font-semibold text-sky-600 py-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     <span>Ingesting text, figures, and building FAISS indexes...</span>
                   </div>
