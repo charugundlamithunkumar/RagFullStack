@@ -87,10 +87,11 @@ def process_single_file(session_id: str, file: UploadFile) -> UploadResponse:
 
             # Create text chunk for description search
             text_chunk = {
-                "text": f"Uploaded image document: {filename}. Visual content and diagrams.",
+                "text": f"Uploaded image document: {filename}. Visual content, diagram, and figures.",
                 "doc_name": filename,
                 "page_number": 1,
                 "modality": "text",
+                "chunk_id": f"{filename}_img_txt_0",
             }
             chunks = [text_chunk]
 
@@ -101,6 +102,7 @@ def process_single_file(session_id: str, file: UploadFile) -> UploadResponse:
                 "caption": f"Uploaded Image Document: {filename}",
                 "doc_name": filename,
                 "modality": "image",
+                "figure_id": f"{filename}_fig_0",
             }
             figures = [figure_item]
 

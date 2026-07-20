@@ -72,6 +72,17 @@ def create_thread(thread_id: str, title: str = "New Chat") -> dict:
         return {"id": thread_id, "title": title}
 
 
+def update_thread_title(thread_id: str, title: str) -> bool:
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE threads SET title = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (title, thread_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+
+
 def get_thread_messages(thread_id: str) -> list[dict]:
     with get_db() as conn:
         cursor = conn.cursor()

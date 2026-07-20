@@ -23,10 +23,10 @@ import {
   Plus,
   RotateCcw,
   MessageSquare,
-  ChevronLeft,
-  ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
+  MoreHorizontal,
+  Edit3,
 } from "lucide-react";
 import { getSessionId } from "@/lib/session";
 import {
@@ -37,6 +37,7 @@ import {
   figureUrl,
   fetchThreads,
   createThread,
+  renameThreadApi,
   fetchThreadMessages,
   fetchThreadDocs,
   deleteThreadApi,
@@ -172,43 +173,49 @@ function renderInline(text: string): React.ReactNode[] {
 }
 
 /* ════════════════════════════════════════════════════════════
-   FIGURE GALLERY
+   PROMINENT INLINE FIGURE DISPLAY
+   Renders actual diagrams & figures prominently under the answer
    ════════════════════════════════════════════════════════════ */
 function FigureGallery({ urls }: { urls: string[] }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
   if (!urls || urls.length === 0) return null;
 
   return (
-    <div className="mt-4 pt-3.5 border-t border-slate-100">
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-[#007AFF] mb-2.5">
-        <ImageIcon className="h-3.5 w-3.5" />
-        <span>Extracted & Ingested Images ({urls.length})</span>
+    <div className="mt-5 pt-4 border-t border-slate-100 space-y-3">
+      <div className="flex items-center gap-2 text-xs font-bold text-[#007AFF] uppercase tracking-wider">
+        <ImageIcon className="h-4 w-4" />
+        <span>Retrieved Diagrams & Visual References ({urls.length})</span>
       </div>
-      <div className="grid grid-cols-2 gap-3">
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
         {urls.map((url, idx) => {
           const full = figureUrl(url);
           return (
             <div
               key={idx}
               onClick={() => setLightbox(full)}
-              className="group relative rounded-2xl overflow-hidden border border-black/5 bg-slate-50 cursor-pointer hover:border-[#007AFF]/40 hover:shadow-ios-sm transition-all"
+              className="group relative rounded-2xl overflow-hidden border border-black/10 bg-white shadow-ios-sm cursor-pointer hover:border-[#007AFF] hover:shadow-ios-md transition-all p-2"
             >
-              <div className="aspect-video flex items-center justify-center p-2.5">
+              <div className="relative aspect-video w-full rounded-xl bg-slate-50 overflow-hidden flex items-center justify-center border border-slate-100">
                 <img
                   src={full}
-                  alt={`Extracted Image ${idx + 1}`}
+                  alt={`Retrieved Figure ${idx + 1}`}
                   className="max-h-full max-w-full object-contain group-hover:scale-105 transition-transform duration-300"
                   loading="lazy"
                 />
-              </div>
-              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur-md p-2 rounded-full shadow-md">
-                  <Maximize2 className="h-3.5 w-3.5 text-slate-800" />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center">
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/95 backdrop-blur-md p-2 rounded-full shadow-md text-slate-800">
+                    <Maximize2 className="h-4 w-4 text-[#007AFF]" />
+                  </div>
                 </div>
               </div>
-              <div className="px-3 pb-2 text-[11px] font-medium text-slate-500 flex justify-between">
-                <span>Image #{idx + 1}</span>
-                <span className="text-slate-400">Tap to expand</span>
+              <div className="px-2 pt-2.5 pb-1 flex items-center justify-between text-xs">
+                <span className="font-semibold text-slate-800">
+                  Figure #{idx + 1}
+                </span>
+                <span className="text-[11px] text-[#007AFF] font-medium">
+                  Click to view full screen ↗
+                </span>
               </div>
             </div>
           );
@@ -218,7 +225,7 @@ function FigureGallery({ urls }: { urls: string[] }) {
       {lightbox && (
         <div
           onClick={() => setLightbox(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-md cursor-pointer"
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/70 backdrop-blur-md cursor-pointer"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -349,7 +356,7 @@ function DebugPanel({
 }
 
 /* ════════════════════════════════════════════════════════════
-   MAIN PAGE — Claude Sidebar + Ctrl+V Clipboard Image Upload
+   MAIN PAGE — Claude Hover Three-Dots Menu + Inline Rename
    ════════════════════════════════════════════════════════════ */
 export default function Page() {
   const [sessionId, setSessionId] = useState("");
@@ -368,6 +375,11 @@ export default function Page() {
   const [threads, setThreads] = useState<ChatThread[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string>("");
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
+  // Three-dots menu dropdown state
+  const [activeMenuThreadId, setActiveMenuThreadId] = useState<string | null>(null);
+  const [editingThreadId, setEditingThreadId] = useState<string | null>(null);
+  const [editTitleInput, setEditTitleInput] = useState("");
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -396,6 +408,13 @@ export default function Page() {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
 
+  // Close three dots dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setActiveMenuThreadId(null);
+    window.addEventListener("click", handleClickOutside);
+    return () => window.removeEventListener("click", handleClickOutside);
+  }, []);
+
   const loadThreadsList = async () => {
     try {
       const list = await fetchThreads();
@@ -410,7 +429,6 @@ export default function Page() {
       const msgs = await fetchThreadMessages(threadId);
       setMessages(msgs);
 
-      // Load thread docs
       const threadDocs = await fetchThreadDocs(threadId);
       if (threadDocs && threadDocs.length > 0) {
         setSelectedDocs(threadDocs);
@@ -493,7 +511,6 @@ export default function Page() {
         if (item.kind === "file") {
           const file = item.getAsFile();
           if (file) {
-            // Rename pasted blobs into a nice filename if unnamed
             const extension = file.type.split("/")[1] || "png";
             const fileWithNiceName = new File(
               [file],
@@ -596,6 +613,20 @@ export default function Page() {
     }
   };
 
+  const handleSaveRename = async (thId: string) => {
+    if (!editTitleInput.trim()) {
+      setEditingThreadId(null);
+      return;
+    }
+    try {
+      await renameThreadApi(thId, editTitleInput.trim());
+      setEditingThreadId(null);
+      loadThreadsList();
+    } catch (err) {
+      console.error("Failed to rename thread:", err);
+    }
+  };
+
   const handleDeleteThread = async (thId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
@@ -651,7 +682,7 @@ export default function Page() {
         />
       </div>
 
-      {/* Hidden file input supporting MULTIPLE files & IMAGES */}
+      {/* Hidden file input */}
       <input
         type="file"
         ref={fileInputRef}
@@ -666,7 +697,7 @@ export default function Page() {
         className="hidden"
       />
 
-      {/* ─── CLAUDE-STYLE LEFT SIDEBAR FOR CHAT THREADS ─── */}
+      {/* ─── CLAUDE-STYLE SIDEBAR WITH HOVER THREE-DOTS MENU ─── */}
       <AnimatePresence>
         {isSidebarOpen && (
           <motion.aside
@@ -718,30 +749,91 @@ export default function Page() {
               ) : (
                 threads.map((th) => {
                   const isActive = activeThreadId === th.id;
+                  const isEditing = editingThreadId === th.id;
+                  const isMenuOpen = activeMenuThreadId === th.id;
+
                   return (
                     <div
                       key={th.id}
                       onClick={() => {
-                        setActiveThreadId(th.id);
-                        setSessionId(th.id);
+                        if (!isEditing) {
+                          setActiveThreadId(th.id);
+                          setSessionId(th.id);
+                        }
                       }}
-                      className={`group flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs transition cursor-pointer ${
+                      className={`group relative flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs transition cursor-pointer ${
                         isActive
                           ? "bg-[#007AFF]/10 text-[#007AFF] font-bold shadow-2xs"
                           : "text-slate-700 hover:bg-slate-100/70 hover:text-slate-900"
                       }`}
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                      <div className="flex items-center gap-2.5 min-w-0 pr-2 flex-1">
                         <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-70" />
-                        <span className="truncate">{th.title}</span>
+                        {isEditing ? (
+                          <input
+                            type="text"
+                            value={editTitleInput}
+                            onChange={(e) => setEditTitleInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleSaveRename(th.id);
+                              if (e.key === "Escape") setEditingThreadId(null);
+                            }}
+                            onBlur={() => handleSaveRename(th.id)}
+                            autoFocus
+                            className="bg-white border border-[#007AFF] rounded px-1.5 py-0.5 text-xs text-slate-900 outline-none w-full"
+                          />
+                        ) : (
+                          <span className="truncate">{th.title}</span>
+                        )}
                       </div>
-                      <button
-                        onClick={(e) => handleDeleteThread(th.id, e)}
-                        className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition cursor-pointer shrink-0"
-                        title="Delete Thread"
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </button>
+
+                      {/* Claude Style Three Dots Menu Button (Appears on hover or when open) */}
+                      {!isEditing && (
+                        <div className="relative shrink-0">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuThreadId(isMenuOpen ? null : th.id);
+                            }}
+                            className={`p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition cursor-pointer ${
+                              isMenuOpen ? "opacity-100 bg-slate-200/60 text-slate-800" : "opacity-0 group-hover:opacity-100"
+                            }`}
+                            title="Chat Options"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </button>
+
+                          {/* Dropdown Menu (Rename / Delete) */}
+                          {isMenuOpen && (
+                            <div
+                              onClick={(e) => e.stopPropagation()}
+                              className="absolute right-0 top-7 z-50 w-32 bg-white rounded-2xl shadow-ios-md border border-black/10 p-1 space-y-0.5 text-xs font-normal"
+                            >
+                              <button
+                                onClick={() => {
+                                  setActiveMenuThreadId(null);
+                                  setEditingThreadId(th.id);
+                                  setEditTitleInput(th.title);
+                                }}
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-slate-100 text-slate-700 hover:text-slate-900 transition text-left cursor-pointer"
+                              >
+                                <Edit3 className="h-3.5 w-3.5 text-[#007AFF]" />
+                                <span>Rename</span>
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  setActiveMenuThreadId(null);
+                                  handleDeleteThread(th.id, e);
+                                }}
+                                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-rose-50 text-slate-700 hover:text-rose-600 transition text-left cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                                <span>Delete</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -791,8 +883,17 @@ export default function Page() {
         )}
       </AnimatePresence>
 
-      {/* ─── FLOATING TOP PILL CONTROLS ─── */}
+      {/* ─── FLOATING TOP PILL CONTROLS (Includes + New Thread next to Files) ─── */}
       <div className="absolute top-4 right-6 z-30 flex items-center gap-2">
+        <button
+          onClick={handleNewChat}
+          className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-md hover:bg-white text-slate-700 shadow-ios-sm border border-black/10 transition cursor-pointer"
+          title="Start New Thread"
+        >
+          <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+          <span>+ New Thread</span>
+        </button>
+
         <button
           onClick={() => setShowDocDrawer((d) => !d)}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer shadow-ios-sm ${
@@ -1015,6 +1116,7 @@ export default function Page() {
                       <div className="ios-card rounded-3xl p-6 border border-black/5 shadow-ios-md">
                         <RenderMarkdown text={msg.text} />
 
+                        {/* Display Prominent Inline Images */}
                         {msg.response?.figure_urls &&
                           msg.response.figure_urls.length > 0 && (
                             <FigureGallery urls={msg.response.figure_urls} />

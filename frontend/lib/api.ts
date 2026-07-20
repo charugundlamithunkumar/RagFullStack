@@ -29,6 +29,13 @@ export async function createThread(title: string = "New Chat"): Promise<ChatThre
   return handle<ChatThread>(res);
 }
 
+export async function renameThreadApi(threadId: string, title: string): Promise<ChatThread> {
+  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}?title=${encodeURIComponent(title)}`, {
+    method: "PUT",
+  });
+  return handle<ChatThread>(res);
+}
+
 export async function fetchThreadMessages(threadId: string): Promise<ChatMessage[]> {
   const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/messages`);
   return handle<ChatMessage[]>(res);

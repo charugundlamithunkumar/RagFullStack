@@ -33,6 +33,14 @@ def create_new_thread(title: str = "New Chat"):
     return database.create_thread(thread_id, title)
 
 
+@router.put("/threads/{thread_id}")
+def rename_thread(thread_id: str, title: str):
+    success = database.update_thread_title(thread_id, title)
+    if not success:
+        raise HTTPException(404, "Thread not found")
+    return {"id": thread_id, "title": title}
+
+
 @router.get("/threads/{thread_id}/messages")
 def get_messages(thread_id: str):
     return database.get_thread_messages(thread_id)
