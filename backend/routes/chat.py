@@ -1,9 +1,9 @@
-"""Ask endpoint: wraps the full retrieval + generation pipeline, in the
-exact same order app/streamlit_app.py already calls it in:
-route_documents -> search_multi_doc -> reciprocal_rank_fusion ->
-rerank_and_merge -> select_generation_context -> generate_answer.
+"""Ask endpoint & persistent Thread/Message management routes using SQLite database.
 """
 from __future__ import annotations
+import os
+import uuid
+import datetime
 from fastapi import APIRouter, HTTPException
 
 from retrieval.router import route_documents
@@ -14,11 +14,41 @@ from generation.answer import generate_answer
 
 from backend.session_store import get_session
 from backend.schemas import AskRequest, AskResponse, DebugChunk
+from backend import database
 
 router = APIRouter()
 
 RETRIEVAL_TOP_K = 10
 GENERATION_TOP_N = 5
+
+
+@router.get("/threads")
+def get_threads():
+    return database.list_threads()
+
+
+@router.post("/threads")
+def create_new_thread(title: str = "New Chat"):
+    thread_id = str(uuid.uuid4())
+    return database.create_thread(thread_id, title)
+
+
+@router.get("/threads/{thread_id}/messages")
+def get_messages(thread_id: str):
+    return database.get_thread_messages(thread_id)
+
+
+@router.get("/threads/{thread_id}/docs")
+def get_thread_documents(thread_id: str):
+    return database.get_thread_docs(thread_id)
+
+
+@router.delete("/threads/{thread_id}")
+def delete_thread(thread_id: str):
+    success = database.delete_thread(thread_id)
+    if not success:
+        raise HTTPException(404, "Thread not found")
+    return {"deleted": thread_id}
 
 
 @router.post("/ask", response_model=AskResponse)
@@ -48,12 +78,7 @@ def ask(req: AskRequest):
 
     result = generate_answer(req.query, generation_context)
 
-    # Figures are written to backend/_figures/<session_id>/<doc_name>/*.png
-    # by routes/documents.py; main.py mounts that whole root at /figures,
-    # so a saved image_path just needs its FIGURES_ROOT prefix swapped
-    # for the URL prefix.
     from backend.routes.documents import FIGURES_ROOT
-    import os
     figure_urls = [
         "/figures/" + os.path.relpath(p, FIGURES_ROOT).replace(os.sep, "/")
         for p in result["figure_paths"]
@@ -72,7 +97,7 @@ def ask(req: AskRequest):
         for item in generation_context
     ]
 
-    return AskResponse(
+    ask_res = AskResponse(
         answer=result["answer"],
         figure_urls=figure_urls,
         guarded=result["guarded"],
@@ -81,3 +106,30 @@ def ask(req: AskRequest):
         selected_docs=req.selected_docs,
         debug_chunks=debug_chunks,
     )
+
+    # Save to SQLite Database
+    timestamp = datetime.datetime.now().strftime("%I:%M %p")
+
+    # Save user message
+    user_msg_id = f"user-{uuid.uuid4().hex[:8]}"
+    database.save_message(req.session_id, {
+        "id": user_msg_id,
+        "sender": "user",
+        "text": req.query,
+        "timestamp": timestamp,
+    })
+
+    # Save assistant response
+    ai_msg_id = f"ai-{uuid.uuid4().hex[:8]}"
+    database.save_message(req.session_id, {
+        "id": ai_msg_id,
+        "sender": "assistant",
+        "text": ask_res.answer,
+        "timestamp": timestamp,
+        "response": ask_res.dict(),
+    })
+
+    # Save attached documents for this thread
+    database.save_thread_docs(req.session_id, req.selected_docs)
+
+    return ask_res

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
@@ -22,6 +22,11 @@ import {
   Info,
   Plus,
   RotateCcw,
+  MessageSquare,
+  ChevronLeft,
+  ChevronRight,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { getSessionId } from "@/lib/session";
 import {
@@ -30,6 +35,12 @@ import {
   deleteDocument,
   askQuestion,
   figureUrl,
+  fetchThreads,
+  createThread,
+  fetchThreadMessages,
+  fetchThreadDocs,
+  deleteThreadApi,
+  type ChatThread,
 } from "@/lib/api";
 import type { DocumentInfo, ChatMessage, DebugChunk } from "@/lib/types";
 
@@ -338,7 +349,7 @@ function DebugPanel({
 }
 
 /* ════════════════════════════════════════════════════════════
-   MAIN PAGE — Multi-File & Image Support + Tom & Jerry Pattern
+   MAIN PAGE — Claude Sidebar + Ctrl+V Clipboard Image Upload
    ════════════════════════════════════════════════════════════ */
 export default function Page() {
   const [sessionId, setSessionId] = useState("");
@@ -353,28 +364,70 @@ export default function Page() {
   const [showDocDrawer, setShowDocDrawer] = useState(false);
   const [dragActive, setDragActive] = useState(false);
 
+  // Thread sidebar states
+  const [threads, setThreads] = useState<ChatThread[]>([]);
+  const [activeThreadId, setActiveThreadId] = useState<string>("");
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    setSessionId(getSessionId());
+    const sid = getSessionId();
+    setSessionId(sid);
+    setActiveThreadId(sid);
+    loadThreadsList();
   }, []);
 
   useEffect(() => {
-    if (sessionId) refreshDocuments();
+    if (sessionId) {
+      refreshDocuments();
+    }
   }, [sessionId]);
+
+  useEffect(() => {
+    if (activeThreadId) {
+      loadThreadData(activeThreadId);
+    }
+  }, [activeThreadId]);
 
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
+
+  const loadThreadsList = async () => {
+    try {
+      const list = await fetchThreads();
+      setThreads(list);
+    } catch (err) {
+      console.error("Failed to load threads list:", err);
+    }
+  };
+
+  const loadThreadData = async (threadId: string) => {
+    try {
+      const msgs = await fetchThreadMessages(threadId);
+      setMessages(msgs);
+
+      // Load thread docs
+      const threadDocs = await fetchThreadDocs(threadId);
+      if (threadDocs && threadDocs.length > 0) {
+        setSelectedDocs(threadDocs);
+      }
+    } catch (err) {
+      console.error("Failed to load thread data:", err);
+    }
+  };
 
   const refreshDocuments = async () => {
     if (!sessionId) return;
     try {
       const docs = await listDocuments(sessionId);
       setDocuments(docs);
-      setSelectedDocs(docs.map((d) => d.doc_name));
+      if (selectedDocs.length === 0) {
+        setSelectedDocs(docs.map((d) => d.doc_name));
+      }
     } catch (err) {
       console.error("Failed to fetch documents:", err);
     }
@@ -395,35 +448,74 @@ export default function Page() {
     }
   };
 
-  const handleUploadFiles = async (files: FileList | File[]) => {
-    const fileArray = Array.from(files);
-    if (!fileArray.length || !sessionId) return;
+  const handleUploadFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const fileArray = Array.from(files);
+      if (!fileArray.length || !sessionId) return;
 
-    const allowedExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tiff"];
-    const invalidFiles = fileArray.filter((f) => {
-      const ext = f.name.substring(f.name.lastIndexOf(".")).toLowerCase();
-      return !allowedExtensions.includes(ext);
-    });
+      const allowedExtensions = [".pdf", ".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif", ".tiff"];
+      const invalidFiles = fileArray.filter((f) => {
+        const ext = f.name.substring(f.name.lastIndexOf(".")).toLowerCase();
+        return !allowedExtensions.includes(ext);
+      });
 
-    if (invalidFiles.length > 0) {
-      setUploadError(
-        `Unsupported format for ${invalidFiles.map((f) => f.name).join(", ")}. Allowed: PDF, PNG, JPG, WEBP.`
-      );
-      return;
-    }
+      if (invalidFiles.length > 0) {
+        setUploadError(
+          `Unsupported format for ${invalidFiles.map((f) => f.name).join(", ")}. Allowed: PDF, PNG, JPG, WEBP.`
+        );
+        return;
+      }
 
-    setIsUploading(true);
-    setUploadError(null);
-    try {
-      await uploadDocuments(sessionId, fileArray);
-      await refreshDocuments();
-      setShowUploadModal(false);
-    } catch (err: any) {
-      setUploadError(err.message || "Failed to process files.");
-    } finally {
-      setIsUploading(false);
-    }
-  };
+      setIsUploading(true);
+      setUploadError(null);
+      try {
+        await uploadDocuments(sessionId, fileArray);
+        await refreshDocuments();
+        setShowUploadModal(false);
+      } catch (err: any) {
+        setUploadError(err.message || "Failed to process files.");
+      } finally {
+        setIsUploading(false);
+      }
+    },
+    [sessionId]
+  );
+
+  /* ─── GLOBAL CLIPBOARD PASTE LISTENER (Ctrl+V / Cmd+V) ─── */
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+
+      const pastedFiles: File[] = [];
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (item.kind === "file") {
+          const file = item.getAsFile();
+          if (file) {
+            // Rename pasted blobs into a nice filename if unnamed
+            const extension = file.type.split("/")[1] || "png";
+            const fileWithNiceName = new File(
+              [file],
+              file.name && file.name !== "image.png"
+                ? file.name
+                : `pasted_image_${Date.now()}.${extension}`,
+              { type: file.type }
+            );
+            pastedFiles.push(fileWithNiceName);
+          }
+        }
+      }
+
+      if (pastedFiles.length > 0) {
+        e.preventDefault();
+        handleUploadFiles(pastedFiles);
+      }
+    };
+
+    window.addEventListener("paste", handlePaste);
+    return () => window.removeEventListener("paste", handlePaste);
+  }, [handleUploadFiles]);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -459,7 +551,7 @@ export default function Page() {
     setIsLoading(true);
 
     try {
-      const res = await askQuestion(sessionId, query, selectedDocs);
+      const res = await askQuestion(activeThreadId || sessionId, query, selectedDocs);
       setMessages((prev) => [
         ...prev,
         {
@@ -473,6 +565,7 @@ export default function Page() {
           response: res,
         },
       ]);
+      loadThreadsList();
     } catch (err: any) {
       setMessages((prev) => [
         ...prev,
@@ -491,8 +584,29 @@ export default function Page() {
     }
   };
 
-  const handleNewChat = () => {
-    setMessages([]);
+  const handleNewChat = async () => {
+    try {
+      const newTh = await createThread("New Chat");
+      setActiveThreadId(newTh.id);
+      setSessionId(newTh.id);
+      setMessages([]);
+      loadThreadsList();
+    } catch (err) {
+      console.error("Failed to create thread:", err);
+    }
+  };
+
+  const handleDeleteThread = async (thId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await deleteThreadApi(thId);
+      loadThreadsList();
+      if (activeThreadId === thId) {
+        handleNewChat();
+      }
+    } catch (err) {
+      console.error("Failed to delete thread:", err);
+    }
   };
 
   const hasMessages = messages.length > 0;
@@ -504,7 +618,7 @@ export default function Page() {
 
   return (
     <div
-      className="flex flex-col h-screen w-full bg-[#f6f5f0] text-[#1c1c1e] overflow-hidden relative select-none"
+      className="flex h-screen w-full bg-[#f6f5f0] text-[#1c1c1e] overflow-hidden relative select-none"
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
@@ -552,6 +666,107 @@ export default function Page() {
         className="hidden"
       />
 
+      {/* ─── CLAUDE-STYLE LEFT SIDEBAR FOR CHAT THREADS ─── */}
+      <AnimatePresence>
+        {isSidebarOpen && (
+          <motion.aside
+            initial={{ width: 0, opacity: 0 }}
+            animate={{ width: 280, opacity: 1 }}
+            exit={{ width: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            className="h-full bg-white/90 backdrop-blur-xl border-r border-black/10 flex flex-col shrink-0 z-30 relative shadow-ios-md"
+          >
+            {/* Sidebar Header */}
+            <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-xl bg-gradient-to-tr from-[#007AFF] to-sky-400 flex items-center justify-center shadow-xs">
+                  <Sparkles className="h-4 w-4 text-white" />
+                </div>
+                <span className="font-bold text-slate-900 text-sm tracking-tight">
+                  Chat History
+                </span>
+              </div>
+              <button
+                onClick={() => setIsSidebarOpen(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer"
+                title="Collapse Sidebar"
+              >
+                <PanelLeftClose className="h-4.5 w-4.5" />
+              </button>
+            </div>
+
+            {/* New Chat Button */}
+            <div className="p-3">
+              <button
+                onClick={handleNewChat}
+                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 rounded-2xl bg-[#007AFF] hover:bg-[#0062cc] text-white font-semibold text-xs transition cursor-pointer shadow-ios-sm"
+              >
+                <Plus className="h-4 w-4 stroke-[2.5]" />
+                <span>New Chat</span>
+              </button>
+            </div>
+
+            {/* Threads List */}
+            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-2 block mb-1">
+                Recent Threads ({threads.length})
+              </span>
+              {threads.length === 0 ? (
+                <div className="p-4 text-center text-xs text-slate-400 italic">
+                  No previous chats saved yet
+                </div>
+              ) : (
+                threads.map((th) => {
+                  const isActive = activeThreadId === th.id;
+                  return (
+                    <div
+                      key={th.id}
+                      onClick={() => {
+                        setActiveThreadId(th.id);
+                        setSessionId(th.id);
+                      }}
+                      className={`group flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs transition cursor-pointer ${
+                        isActive
+                          ? "bg-[#007AFF]/10 text-[#007AFF] font-bold shadow-2xs"
+                          : "text-slate-700 hover:bg-slate-100/70 hover:text-slate-900"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0 pr-2">
+                        <MessageSquare className="h-3.5 w-3.5 shrink-0 opacity-70" />
+                        <span className="truncate">{th.title}</span>
+                      </div>
+                      <button
+                        onClick={(e) => handleDeleteThread(th.id, e)}
+                        className="p-1 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition cursor-pointer shrink-0"
+                        title="Delete Thread"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Sidebar Footer */}
+            <div className="p-3 border-t border-slate-100 text-[11px] text-slate-400 text-center font-medium">
+              Multimodal RAG • Claude Style
+            </div>
+          </motion.aside>
+        )}
+      </AnimatePresence>
+
+      {/* Sidebar Expand Button when collapsed */}
+      {!isSidebarOpen && (
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="absolute top-4 left-4 z-30 p-2.5 rounded-full bg-white/95 backdrop-blur-md hover:bg-white text-slate-700 shadow-ios-md border border-black/10 transition cursor-pointer"
+          title="Open Threads Sidebar"
+        >
+          <PanelLeftOpen className="h-5 w-5 text-[#007AFF]" />
+        </button>
+      )}
+
       {/* ─── Drag & Drop Overlay ─── */}
       <AnimatePresence>
         {dragActive && (
@@ -578,17 +793,6 @@ export default function Page() {
 
       {/* ─── FLOATING TOP PILL CONTROLS ─── */}
       <div className="absolute top-4 right-6 z-30 flex items-center gap-2">
-        {hasMessages && (
-          <button
-            onClick={handleNewChat}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/95 backdrop-blur-md hover:bg-white text-slate-700 shadow-ios-sm border border-black/10 transition cursor-pointer"
-            title="Start New Thread"
-          >
-            <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
-            <span>New Thread</span>
-          </button>
-        )}
-
         <button
           onClick={() => setShowDocDrawer((d) => !d)}
           className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer shadow-ios-sm ${
@@ -654,7 +858,7 @@ export default function Page() {
                     No indexed PDFs or images in this workspace session
                   </span>
                   <span className="text-xs text-slate-400">
-                    Click here to upload multiple files at once
+                    Click here or press Ctrl+V to paste images
                   </span>
                 </div>
               ) : (
@@ -741,7 +945,7 @@ export default function Page() {
                     Multimodal RAG Knowledge Assistant
                   </h2>
                   <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                    Upload multiple PDFs or images. Synthesize text and retrieve visual diagrams with CLIP vector search.
+                    Upload multiple PDFs/Images or press <strong>Ctrl+V</strong> anywhere to paste images directly!
                   </p>
                 </div>
 
@@ -903,7 +1107,7 @@ export default function Page() {
                   type="button"
                   onClick={() => setShowUploadModal(true)}
                   className="p-2.5 text-slate-400 hover:text-[#007AFF] rounded-full hover:bg-slate-100/80 transition cursor-pointer shrink-0"
-                  title="Attach PDFs or Images"
+                  title="Attach PDFs or Images (or Ctrl+V to paste)"
                 >
                   <Paperclip className="h-5 w-5" />
                 </button>
@@ -915,7 +1119,7 @@ export default function Page() {
                   onChange={(e) => setInputText(e.target.value)}
                   placeholder={
                     documents.length === 0
-                      ? "Attach PDFs or images to ask questions..."
+                      ? "Attach/paste PDFs or images to ask questions (Ctrl+V)..."
                       : "Ask a question about your uploaded documents..."
                   }
                   disabled={isLoading}
@@ -959,7 +1163,7 @@ export default function Page() {
                       Upload PDFs & Images
                     </h3>
                     <p className="text-xs text-slate-400">
-                      Select single or multiple files at once
+                      Select multiple files or press Ctrl+V to paste
                     </p>
                   </div>
                 </div>
@@ -990,7 +1194,7 @@ export default function Page() {
                     <FileUp className="h-8 w-8" />
                   </div>
                   <p className="text-xs sm:text-sm font-semibold text-slate-800">
-                    Click to select multiple files or drag & drop
+                    Click to select multiple files, drag & drop, or Ctrl+V
                   </p>
                   <p className="text-[11px] text-slate-400 mt-1">
                     Supports PDF, PNG, JPG, JPEG, WEBP, BMP, GIF

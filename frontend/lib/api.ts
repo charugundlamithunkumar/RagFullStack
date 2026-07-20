@@ -1,4 +1,4 @@
-import type { AskResponse, DocumentInfo, UploadResponse } from "./types";
+import type { AskResponse, DocumentInfo, UploadResponse, ChatMessage } from "./types";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
@@ -8,6 +8,42 @@ async function handle<T>(res: Response): Promise<T> {
     throw new Error(text || `Request failed: ${res.status}`);
   }
   return res.json();
+}
+
+export interface ChatThread {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function fetchThreads(): Promise<ChatThread[]> {
+  const res = await fetch(`${API_BASE}/chat/threads`);
+  return handle<ChatThread[]>(res);
+}
+
+export async function createThread(title: string = "New Chat"): Promise<ChatThread> {
+  const res = await fetch(`${API_BASE}/chat/threads?title=${encodeURIComponent(title)}`, {
+    method: "POST",
+  });
+  return handle<ChatThread>(res);
+}
+
+export async function fetchThreadMessages(threadId: string): Promise<ChatMessage[]> {
+  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/messages`);
+  return handle<ChatMessage[]>(res);
+}
+
+export async function fetchThreadDocs(threadId: string): Promise<string[]> {
+  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}/docs`);
+  return handle<string[]>(res);
+}
+
+export async function deleteThreadApi(threadId: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/chat/threads/${encodeURIComponent(threadId)}`, {
+    method: "DELETE",
+  });
+  await handle<{ deleted: string }>(res);
 }
 
 export async function uploadDocuments(sessionId: string, files: File[]): Promise<UploadResponse[]> {
