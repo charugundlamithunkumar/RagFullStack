@@ -69,7 +69,7 @@ export default function ChatThread({
               <div className="text-sm text-red-700 mt-2">Generation error: {qa.result.error}</div>
             )}
             <FigureGallery figureUrls={qa.result.figure_urls} />
-            <DebugPanel result={qa.result} />
+            <DebugPanel routedDocs={qa.result.routed_docs} debugChunks={qa.result.debug_chunks} />
           </div>
         ))}
       </div>

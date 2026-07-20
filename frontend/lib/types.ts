@@ -1,6 +1,9 @@
 export interface DocumentInfo {
   doc_name: string;
   scanned_warning: boolean;
+  chunk_count?: number;
+  figure_count?: number;
+  has_text?: boolean;
 }
 
 export interface UploadResponse {
@@ -26,8 +29,15 @@ export interface AskResponse {
   guarded: boolean;
   error: string | null;
   routed_docs: string[];
-  selected_docs: string[];
   debug_chunks: DebugChunk[];
+}
+
+export interface ChatMessage {
+  id: string;
+  sender: "user" | "assistant";
+  text: string;
+  timestamp: string;
+  response?: AskResponse;
 }
 
 export interface QaTurn {

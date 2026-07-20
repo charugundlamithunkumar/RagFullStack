@@ -2,14 +2,16 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "MM-RAG — Multimodal Document Q&A",
-  description: "Upload PDFs, ask questions, get answers grounded in text and figures.",
+  title: "Knowledge Workspace — Multimodal RAG",
+  description: "Upload PDFs, analyze documents, and ask questions grounded in text and figures with AI.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="max-w-4xl mx-auto px-6 py-10">{children}</body>
+      <body className="h-screen w-full overflow-hidden bg-[#fafaf9] text-[#1a1a1a] antialiased">
+        {children}
+      </body>
     </html>
   );
 }
