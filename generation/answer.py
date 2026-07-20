@@ -3,7 +3,9 @@ or Local Grounded Structured Synthesizer fallback.
 """
 from __future__ import annotations
 import os
-import requests
+import json
+import urllib.request
+import urllib.error
 from groq import Groq
 
 GROQ_MODEL = "openai/gpt-oss-120b"
@@ -130,17 +132,19 @@ def generate_answer(
 
     # 2. TRY LOCAL OLLAMA LLM (http://localhost:11434)
     try:
-        payload = {
+        payload = json.dumps({
             "model": OLLAMA_MODEL,
             "messages": [
                 {"role": "system", "content": SYSTEM_PROMPT},
                 {"role": "user", "content": f"Context:\n{context_block}\n\nQuestion: {query}"},
             ],
             "stream": False,
-        }
-        res = requests.post(OLLAMA_URL, json=payload, timeout=5)
-        if res.ok:
-            data = res.json()
+        }).encode("utf-8")
+        req = urllib.request.Request(
+            OLLAMA_URL, data=payload, headers={"Content-Type": "application/json"}
+        )
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
             answer_text = data.get("message", {}).get("content", "")
             if answer_text:
                 return {
