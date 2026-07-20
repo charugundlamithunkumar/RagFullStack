@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+eval/fixtures/_extracted_figures/
+eval/fixtures/_bar_chart.png
+eval/fixtures/_pipeline_diagram.png
+backend/_figures/
+backend/_uploaded_figures/
+frontend/node_modules/
+frontend/.next/
+frontend/.env.local
+

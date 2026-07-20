@@ -1,0 +1,9 @@
+# Additional dependencies for the FastAPI backend, on top of the
+# repo root's requirements.txt (which already covers faiss, sentence-
+# transformers, open_clip, pymupdf, groq, python-dotenv, etc.).
+#
+# Install both from the repo root:
+#   pip install -r requirements.txt -r backend/requirements-web.txt
+fastapi>=0.110
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
