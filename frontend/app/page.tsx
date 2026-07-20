@@ -22,7 +22,6 @@ import {
   Info,
   Plus,
   RotateCcw,
-  BookOpen,
 } from "lucide-react";
 import { getSessionId } from "@/lib/session";
 import {
@@ -35,8 +34,7 @@ import {
 import type { DocumentInfo, ChatMessage, DebugChunk } from "@/lib/types";
 
 /* ════════════════════════════════════════════════════════════
-   MARKDOWN RENDERER — Apple Pages Typography
-   Headings & Important terms highlighted in Apple iOS Blue (#007AFF)
+   MARKDOWN RENDERER — High contrast text, highlighted headings
    ════════════════════════════════════════════════════════════ */
 function RenderMarkdown({ text }: { text: string }) {
   const lines = text.split("\n");
@@ -46,7 +44,6 @@ function RenderMarkdown({ text }: { text: string }) {
   while (i < lines.length) {
     const line = lines[i];
 
-    // Headings
     if (line.startsWith("#### ")) {
       elements.push(<h4 key={i}>{renderInline(line.slice(5))}</h4>);
       i++;
@@ -68,7 +65,6 @@ function RenderMarkdown({ text }: { text: string }) {
       continue;
     }
 
-    // Code blocks
     if (line.startsWith("```")) {
       const codeLines: string[] = [];
       i++;
@@ -76,7 +72,7 @@ function RenderMarkdown({ text }: { text: string }) {
         codeLines.push(lines[i]);
         i++;
       }
-      i++; // skip closing ```
+      i++;
       elements.push(
         <pre key={`code-${i}`}>
           <code>{codeLines.join("\n")}</code>
@@ -85,7 +81,6 @@ function RenderMarkdown({ text }: { text: string }) {
       continue;
     }
 
-    // Blockquote
     if (line.startsWith("> ")) {
       elements.push(
         <blockquote key={i}>{renderInline(line.slice(2))}</blockquote>
@@ -94,7 +89,6 @@ function RenderMarkdown({ text }: { text: string }) {
       continue;
     }
 
-    // Ordered list: collect consecutive numbered lines
     if (/^\d+\.\s/.test(line)) {
       const items: string[] = [];
       while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
@@ -111,7 +105,6 @@ function RenderMarkdown({ text }: { text: string }) {
       continue;
     }
 
-    // Unordered list
     if (/^[-*]\s/.test(line)) {
       const items: string[] = [];
       while (i < lines.length && /^[-*]\s/.test(lines[i])) {
@@ -128,13 +121,11 @@ function RenderMarkdown({ text }: { text: string }) {
       continue;
     }
 
-    // Blank line
     if (line.trim() === "") {
       i++;
       continue;
     }
 
-    // Regular paragraph
     elements.push(<p key={i}>{renderInline(line)}</p>);
     i++;
   }
@@ -142,7 +133,6 @@ function RenderMarkdown({ text }: { text: string }) {
   return <div className="ai-response">{elements}</div>;
 }
 
-/** Inline formatting: **bold**, `code`, *italic* */
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
   const regex = /(\*\*.*?\*\*|`[^`]+`|\*[^*]+\*)/g;
@@ -170,7 +160,7 @@ function renderInline(text: string): React.ReactNode[] {
 }
 
 /* ════════════════════════════════════════════════════════════
-   FIGURE GALLERY — iOS Grid & Lightbox
+   FIGURE GALLERY
    ════════════════════════════════════════════════════════════ */
 function FigureGallery({ urls }: { urls: string[] }) {
   const [lightbox, setLightbox] = useState<string | null>(null);
@@ -213,7 +203,6 @@ function FigureGallery({ urls }: { urls: string[] }) {
         })}
       </div>
 
-      {/* Lightbox Modal */}
       {lightbox && (
         <div
           onClick={() => setLightbox(null)}
@@ -242,7 +231,7 @@ function FigureGallery({ urls }: { urls: string[] }) {
 }
 
 /* ════════════════════════════════════════════════════════════
-   DEBUG PANEL — iOS Inspector Style
+   DEBUG PANEL
    ════════════════════════════════════════════════════════════ */
 function DebugPanel({
   routedDocs,
@@ -348,7 +337,7 @@ function DebugPanel({
 }
 
 /* ════════════════════════════════════════════════════════════
-   MAIN PAGE — iOS Pages App UI Design
+   MAIN PAGE
    ════════════════════════════════════════════════════════════ */
 export default function Page() {
   const [sessionId, setSessionId] = useState("");
@@ -497,12 +486,44 @@ export default function Page() {
 
   return (
     <div
-      className="flex flex-col h-screen w-full bg-[#f2f2f7] text-[#1c1c1e] overflow-hidden relative select-none"
+      className="flex flex-col h-screen w-full bg-[#f6f6f2] text-[#1c1c1e] overflow-hidden relative select-none"
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
       onDrop={handleDrop}
     >
+      {/* ─── TOM AND JERRY PLAYFUL CARTOON BACKGROUND ARTWORK ─── */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        {/* Right Corner Peeking Mouse Character (User provided image) */}
+        <div className="absolute -right-6 bottom-16 sm:bottom-24 w-52 sm:w-80 h-auto opacity-90 transition-transform hover:scale-105">
+          <img
+            src="/jerry_peeking.png"
+            alt="Jerry Cartoon Character Peeking"
+            className="w-full h-auto drop-shadow-md"
+          />
+        </div>
+
+        {/* Left Corner Top Peeking Mouse Character (Flipped) */}
+        <div className="absolute -left-10 top-12 w-40 sm:w-60 h-auto opacity-40 scale-x-[-1] pointer-events-none">
+          <img
+            src="/jerry_peeking.png"
+            alt="Jerry Cartoon Peeking Left"
+            className="w-full h-auto"
+          />
+        </div>
+
+        {/* Floating Cartoon Cheese & Mouse Hole Decorative Elements */}
+        <div className="absolute top-20 right-1/4 opacity-30 text-amber-500 font-bold text-3xl font-mono animate-bounce">
+          🧀
+        </div>
+        <div className="absolute bottom-32 left-10 opacity-30 text-amber-500 font-bold text-4xl animate-pulse">
+          🐾
+        </div>
+        <div className="absolute top-1/3 left-6 opacity-20 text-slate-700 font-extrabold text-2xl font-sans">
+          ⚡
+        </div>
+      </div>
+
       {/* Hidden file input */}
       <input
         type="file"
@@ -516,7 +537,7 @@ export default function Page() {
         className="hidden"
       />
 
-      {/* ─── iOS Drag & Drop Overlay ─── */}
+      {/* ─── Drag & Drop Overlay ─── */}
       <AnimatePresence>
         {dragActive && (
           <motion.div
@@ -540,64 +561,46 @@ export default function Page() {
         )}
       </AnimatePresence>
 
-      {/* ─── iOS TOP NAVIGATION BAR (Pages App Style) ─── */}
-      <header className="h-14 shrink-0 ios-glass border-b flex items-center justify-between px-6 z-20 sticky top-0">
-        <div className="flex items-center gap-3">
-          {/* iOS Pages App Icon */}
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-400 via-orange-500 to-rose-500 flex items-center justify-center shadow-ios-sm">
-            <BookOpen className="h-4.5 w-4.5 text-white" />
-          </div>
-          <div>
-            <h1 className="font-bold text-slate-900 text-sm tracking-tight flex items-center gap-1.5">
-              Pages RAG Workspace
-            </h1>
-            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
-              Multimodal Knowledge Engine
-            </span>
-          </div>
-        </div>
-
-        {/* iOS Controls Header Segment */}
-        <div className="flex items-center gap-2">
-          {hasMessages && (
-            <button
-              onClick={handleNewChat}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-700 transition cursor-pointer"
-              title="Start New Chat Session"
-            >
-              <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
-              <span>New Thread</span>
-            </button>
-          )}
-
+      {/* ─── FLOATING TOP CONTROLS (Top Header Bar Removed as requested!) ─── */}
+      <div className="absolute top-4 right-6 z-30 flex items-center gap-2">
+        {hasMessages && (
           <button
-            onClick={() => setShowDocDrawer((d) => !d)}
-            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold transition cursor-pointer shadow-ios-sm ${
-              showDocDrawer
-                ? "bg-[#007AFF] text-white"
-                : "bg-white border border-black/10 text-slate-700 hover:bg-slate-50"
+            onClick={handleNewChat}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold bg-white/80 hover:bg-white backdrop-blur-md text-slate-700 transition cursor-pointer shadow-ios-sm border border-black/5"
+            title="Start New Chat Session"
+          >
+            <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
+            <span>New Thread</span>
+          </button>
+        )}
+
+        <button
+          onClick={() => setShowDocDrawer((d) => !d)}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold transition cursor-pointer shadow-ios-sm backdrop-blur-md ${
+            showDocDrawer
+              ? "bg-[#007AFF] text-white"
+              : "bg-white/80 hover:bg-white border border-black/10 text-slate-700"
+          }`}
+        >
+          <FileText className="h-3.5 w-3.5" />
+          <span>Documents ({documents.length})</span>
+          <ChevronDown
+            className={`h-3 w-3 transition-transform ${
+              showDocDrawer ? "rotate-180" : ""
             }`}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            <span>Documents ({documents.length})</span>
-            <ChevronDown
-              className={`h-3 w-3 transition-transform ${
-                showDocDrawer ? "rotate-180" : ""
-              }`}
-            />
-          </button>
+          />
+        </button>
 
-          <button
-            onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white text-xs font-semibold transition cursor-pointer shadow-ios-sm"
-          >
-            <Plus className="h-4 w-4 stroke-[2.5]" />
-            <span>Add PDF</span>
-          </button>
-        </div>
-      </header>
+        <button
+          onClick={() => setShowUploadModal(true)}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white text-xs font-semibold transition cursor-pointer shadow-ios-sm"
+        >
+          <Plus className="h-4 w-4 stroke-[2.5]" />
+          <span>Add PDF</span>
+        </button>
+      </div>
 
-      {/* ─── iOS DOCUMENT DRAWER / INSPECTOR SHEET ─── */}
+      {/* ─── DOCUMENT DRAWER SHEET ─── */}
       <AnimatePresence>
         {showDocDrawer && (
           <motion.div
@@ -605,16 +608,16 @@ export default function Page() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="overflow-hidden bg-white/90 backdrop-blur-xl border-b border-black/10 z-10 shrink-0 shadow-ios-md"
+            className="overflow-hidden bg-white/95 backdrop-blur-xl border-b border-black/10 z-20 shrink-0 shadow-ios-md relative"
           >
             <div className="max-w-3xl mx-auto p-5 space-y-4">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pt-2">
                 <div>
                   <h3 className="text-sm font-bold text-slate-900">
-                    Active Document Knowledge Base
+                    Indexed PDF Documents
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Check the documents you wish to retrieve context from during queries.
+                    Select which PDFs to ground your answers from.
                   </p>
                 </div>
                 <button
@@ -699,18 +702,18 @@ export default function Page() {
       </AnimatePresence>
 
       {/* ─── MAIN CHAT CANVAS ─── */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div className="flex-1 flex flex-col overflow-hidden relative z-10">
+        <div className="flex-1 overflow-y-auto px-4 py-8">
           <div className="max-w-3xl mx-auto space-y-6">
-            {/* iOS Landing State (When empty) */}
+            {/* Landing State */}
             {!hasMessages && (
               <motion.div
                 initial={{ opacity: 0, y: 15 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className="flex flex-col items-center justify-center pt-[10vh] pb-8 text-center space-y-6"
+                className="flex flex-col items-center justify-center pt-[14vh] pb-8 text-center space-y-6"
               >
-                {/* iOS Document Icon Banner */}
+                {/* Center Icon */}
                 <div className="relative">
                   <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[#007AFF] to-sky-400 flex items-center justify-center shadow-ios-md">
                     <Sparkles className="h-10 w-10 text-white" />
@@ -720,17 +723,17 @@ export default function Page() {
                   </div>
                 </div>
 
-                <div className="space-y-2 max-w-md">
+                <div className="space-y-2 max-w-md bg-white/70 backdrop-blur-md p-6 rounded-3xl border border-black/5 shadow-ios-sm">
                   <h2 className="text-2xl font-bold text-slate-900 tracking-tight">
-                    Pages RAG Knowledge Assistant
+                    RAG Knowledge Assistant
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-500 leading-relaxed font-normal">
+                  <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
                     Search and synthesize information directly from your uploaded PDF documents. Headings and key terms are highlighted cleanly for fast reading.
                   </p>
                 </div>
 
-                {/* Prompt Template Pill Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg pt-2">
+                {/* Suggestion Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-lg">
                   {[
                     "Summarize key conclusions",
                     "List core metrics & findings",
@@ -743,7 +746,7 @@ export default function Page() {
                         setInputText(suggestion);
                         inputRef.current?.focus();
                       }}
-                      className="p-3.5 rounded-2xl bg-white hover:bg-slate-50 border border-black/5 hover:border-[#007AFF]/40 text-left text-xs font-semibold text-slate-700 shadow-ios-sm transition cursor-pointer flex items-center justify-between group"
+                      className="p-3.5 rounded-2xl bg-white/80 hover:bg-white backdrop-blur-md border border-black/5 hover:border-[#007AFF]/40 text-left text-xs font-semibold text-slate-700 shadow-ios-sm transition cursor-pointer flex items-center justify-between group"
                     >
                       <span>{suggestion}</span>
                       <ArrowUp className="h-3.5 w-3.5 text-[#007AFF] opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -754,7 +757,7 @@ export default function Page() {
                 {documents.length === 0 && (
                   <button
                     onClick={() => setShowUploadModal(true)}
-                    className="mt-4 flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white font-semibold text-xs transition cursor-pointer shadow-ios-md"
+                    className="mt-2 flex items-center gap-2 px-6 py-3 rounded-full bg-[#007AFF] hover:bg-[#0062cc] text-white font-semibold text-xs transition cursor-pointer shadow-ios-md"
                   >
                     <FileUp className="h-4 w-4" />
                     Upload your first PDF
@@ -763,7 +766,7 @@ export default function Page() {
               </motion.div>
             )}
 
-            {/* iOS Thread Messages */}
+            {/* Messages */}
             <AnimatePresence>
               {messages.map((msg) => (
                 <motion.div
@@ -776,20 +779,18 @@ export default function Page() {
                   }`}
                 >
                   {msg.sender === "user" ? (
-                    /* iOS Blue User Bubble */
                     <div className="max-w-[85%] bg-[#007AFF] text-white px-5 py-3 rounded-3xl rounded-br-lg shadow-ios-sm">
                       <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap font-medium">
                         {msg.text}
                       </p>
                     </div>
                   ) : (
-                    /* iOS Assistant Document Card */
                     <div className="max-w-full w-full">
                       <div className="flex items-center gap-2 mb-2 px-1">
                         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#007AFF] to-sky-400 flex items-center justify-center shadow-xs">
                           <Sparkles className="h-3 w-3 text-white" />
                         </div>
-                        <span className="text-xs font-bold text-slate-400 font-mono">
+                        <span className="text-xs font-bold text-slate-500 font-mono">
                           RAG Assistant • {msg.timestamp}
                         </span>
                       </div>
@@ -815,7 +816,7 @@ export default function Page() {
               ))}
             </AnimatePresence>
 
-            {/* iOS Thinking Indicator */}
+            {/* Thinking indicator */}
             {isLoading && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
@@ -842,13 +843,13 @@ export default function Page() {
           </div>
         </div>
 
-        {/* ─── iOS FLOATING BOTTOM INPUT DOCK ─── */}
-        <div className="p-4 shrink-0 bg-transparent">
+        {/* ─── FLOATING BOTTOM INPUT DOCK ─── */}
+        <div className="p-4 shrink-0 bg-transparent relative z-20">
           <div className="max-w-3xl mx-auto space-y-2">
             {/* Attached Docs Badge Bar */}
             {documents.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap px-2">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
                   Target Context ({selectedDocs.length}):
                 </span>
                 {selectedDocs.length === 0 ? (
@@ -859,7 +860,7 @@ export default function Page() {
                   selectedDocs.map((doc) => (
                     <span
                       key={doc}
-                      className="inline-flex items-center gap-1.5 bg-white border border-black/10 rounded-full px-3 py-1 text-xs text-slate-700 shadow-ios-sm"
+                      className="inline-flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-black/10 rounded-full px-3 py-1 text-xs text-slate-700 shadow-ios-sm"
                     >
                       <FileText className="h-3 w-3 text-[#007AFF]" />
                       <span className="font-medium truncate max-w-[130px]">{doc}</span>
@@ -875,7 +876,7 @@ export default function Page() {
               </div>
             )}
 
-            {/* iOS Floating Capsule Bar */}
+            {/* Input Capsule Bar */}
             <form onSubmit={handleSend} className="relative flex items-center">
               <div className="flex-1 flex items-center ios-glass border border-black/10 rounded-full shadow-ios-lg focus-within:border-[#007AFF] focus-within:ring-2 focus-within:ring-[#007AFF]/20 transition-all pl-2 pr-2 py-1.5">
                 <button
@@ -918,7 +919,7 @@ export default function Page() {
         </div>
       </div>
 
-      {/* ─── iOS PDF UPLOAD MODAL ─── */}
+      {/* ─── PDF UPLOAD MODAL ─── */}
       <AnimatePresence>
         {showUploadModal && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-md">
