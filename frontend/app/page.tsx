@@ -207,7 +207,7 @@ function FigureGallery({ urls }: { urls: string[] }) {
       {lightbox && (
         <div
           onClick={() => setLightbox(null)}
-          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-md cursor-pointer animate-fade-in-up"
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/60 backdrop-blur-md cursor-pointer"
         >
           <div
             onClick={(e) => e.stopPropagation()}
@@ -338,7 +338,7 @@ function DebugPanel({
 }
 
 /* ════════════════════════════════════════════════════════════
-   MAIN PAGE — Tom & Jerry Character Background
+   MAIN PAGE — Tom & Jerry Fullscreen Wallpaper & Cutouts
    ════════════════════════════════════════════════════════════ */
 export default function Page() {
   const [sessionId, setSessionId] = useState("");
@@ -493,34 +493,37 @@ export default function Page() {
       onDragLeave={handleDrag}
       onDrop={handleDrop}
     >
-      {/* ─── TOM AND JERRY CARTOON CHARACTERS FLOATING IN THE BACKGROUND ─── */}
+      {/* ─── FULLSCREEN TOM AND JERRY ARTWORK WALLPAPER PATTERN ─── */}
+      <div className="absolute inset-0 z-0 pointer-events-none opacity-45 tom-jerry-bg-pattern" />
+
+      {/* ─── FLOATING JERRY CHARACTER CUTOUTS IN CORNERS ─── */}
       <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden">
         {/* Bottom Right Jerry Peeking */}
         <img
           src="/jerry.png"
           alt="Jerry character bottom right"
-          className="absolute -bottom-4 -right-4 w-72 sm:w-96 max-w-none object-contain z-0"
+          className="absolute -bottom-4 -right-4 w-72 sm:w-96 max-w-none object-contain z-0 drop-shadow-lg"
         />
 
         {/* Bottom Left Jerry Peeking */}
         <img
           src="/jerry.png"
           alt="Jerry character bottom left"
-          className="absolute -bottom-6 -left-6 w-64 sm:w-80 max-w-none object-contain transform -scale-x-100 z-0 opacity-90"
+          className="absolute -bottom-6 -left-6 w-64 sm:w-80 max-w-none object-contain transform -scale-x-100 z-0 drop-shadow-lg"
         />
 
         {/* Top Right Jerry Peeking */}
         <img
           src="/jerry.png"
           alt="Jerry character top right"
-          className="absolute -top-8 -right-8 w-56 sm:w-72 max-w-none object-contain transform rotate-45 z-0 opacity-80"
+          className="absolute -top-8 -right-8 w-56 sm:w-72 max-w-none object-contain transform rotate-45 z-0 drop-shadow-md"
         />
 
         {/* Top Left Jerry Peeking */}
         <img
           src="/jerry.png"
           alt="Jerry character top left"
-          className="absolute -top-8 -left-8 w-60 sm:w-72 max-w-none object-contain transform -rotate-45 z-0 opacity-80"
+          className="absolute -top-8 -left-8 w-60 sm:w-72 max-w-none object-contain transform -rotate-45 z-0 drop-shadow-md"
         />
       </div>
 
@@ -718,7 +721,7 @@ export default function Page() {
                   <Sparkles className="h-10 w-10 text-white" />
                 </div>
 
-                <div className="space-y-2 max-w-md">
+                <div className="space-y-2 max-w-md bg-white/80 backdrop-blur-md p-4 rounded-3xl border border-black/5 shadow-ios-sm">
                   <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">
                     Multimodal RAG Knowledge Assistant
                   </h2>
