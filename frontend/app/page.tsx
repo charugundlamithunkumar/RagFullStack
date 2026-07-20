@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   FileText,
@@ -20,10 +20,6 @@ import {
   Layers,
   Pin,
   Info,
-  Sun,
-  Moon,
-  Zap,
-  Smile,
 } from "lucide-react";
 import { getSessionId } from "@/lib/session";
 import {
@@ -146,6 +142,7 @@ function RenderMarkdown({ text }: { text: string }) {
 /** Inline formatting: **bold**, `code`, *italic* */
 function renderInline(text: string): React.ReactNode[] {
   const parts: React.ReactNode[] = [];
+  // Process bold, code, italic with regex split
   const regex = /(\*\*.*?\*\*|`[^`]+`|\*[^*]+\*)/g;
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -178,8 +175,8 @@ function FigureGallery({ urls }: { urls: string[] }) {
   if (!urls || urls.length === 0) return null;
 
   return (
-    <div className="mt-4 pt-3 border-t border-[var(--border-soft)]">
-      <div className="flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-blue)] mb-2">
+    <div className="mt-4 pt-3 border-t border-[#e8e8e5]">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-[#2383e2] mb-2">
         <ImageIcon className="h-3.5 w-3.5" />
         <span>Extracted Figures ({urls.length})</span>
       </div>
@@ -190,7 +187,7 @@ function FigureGallery({ urls }: { urls: string[] }) {
             <div
               key={idx}
               onClick={() => setLightbox(full)}
-              className="group relative rounded-xl overflow-hidden border border-[var(--border-soft)] bg-[var(--bg-warm)] cursor-pointer hover:border-[var(--accent-blue)] transition-all"
+              className="group relative rounded-xl overflow-hidden border border-[#e8e8e5] bg-[#f7f7f5] cursor-pointer hover:border-[#2383e2] transition-all"
             >
               <div className="aspect-video flex items-center justify-center p-2">
                 <img
@@ -201,11 +198,11 @@ function FigureGallery({ urls }: { urls: string[] }) {
                 />
               </div>
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 dark:bg-slate-800/90 p-1.5 rounded-full shadow-md">
-                  <Maximize2 className="h-3.5 w-3.5 text-[var(--text-primary)]" />
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 p-1.5 rounded-full shadow-md">
+                  <Maximize2 className="h-3.5 w-3.5 text-[#37352f]" />
                 </div>
               </div>
-              <div className="px-2.5 pb-2 text-xs font-medium text-[var(--text-secondary)]">
+              <div className="px-2.5 pb-2 text-xs font-medium text-[#6b6b60]">
                 Figure {idx + 1}
               </div>
             </div>
@@ -221,11 +218,11 @@ function FigureGallery({ urls }: { urls: string[] }) {
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            className="relative bg-[var(--bg-card)] p-3 rounded-2xl max-w-4xl max-h-[90vh] shadow-2xl border border-[var(--border-soft)]"
+            className="relative bg-white p-3 rounded-2xl max-w-4xl max-h-[90vh] shadow-2xl border border-[#e8e8e5]"
           >
             <button
               onClick={() => setLightbox(null)}
-              className="absolute top-3 right-3 p-1.5 rounded-lg bg-[var(--bg-warm)] hover:bg-[var(--border-soft)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition"
+              className="absolute top-3 right-3 p-1.5 rounded-lg bg-[#f7f7f5] hover:bg-[#e8e8e5] text-[#6b6b60] hover:text-[#37352f] transition"
             >
               <X className="h-4 w-4" />
             </button>
@@ -255,16 +252,16 @@ function DebugPanel({
   if (!debugChunks || debugChunks.length === 0) return null;
 
   return (
-    <div className="mt-3 border border-[var(--border-soft)] rounded-xl overflow-hidden">
+    <div className="mt-3 border border-[#e8e8e5] rounded-xl overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-[var(--bg-warm)] hover:opacity-90 transition cursor-pointer"
+        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-[#f7f7f5] hover:bg-[#f0f0ed] transition cursor-pointer"
       >
-        <span className="flex items-center gap-1.5 text-xs font-semibold text-[var(--accent-blue)]">
+        <span className="flex items-center gap-1.5 text-xs font-semibold text-[#2383e2]">
           <Layers className="h-3.5 w-3.5" />
           Retrieval Grounding ({debugChunks.length} chunks)
         </span>
-        <span className="flex items-center gap-1 text-xs text-[var(--text-muted)]">
+        <span className="flex items-center gap-1 text-xs text-[#9b9b93]">
           {open ? (
             <>
               Hide <ChevronUp className="h-3.5 w-3.5" />
@@ -278,17 +275,17 @@ function DebugPanel({
       </button>
 
       {open && (
-        <div className="p-3.5 space-y-3 bg-[var(--bg-card)] border-t border-[var(--border-soft)]">
+        <div className="p-3.5 space-y-3 bg-white border-t border-[#e8e8e5]">
           {routedDocs.length > 0 && (
             <div>
-              <span className="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider block mb-1">
+              <span className="text-[10px] font-bold text-[#9b9b93] uppercase tracking-wider block mb-1">
                 Routed Documents
               </span>
               <div className="flex flex-wrap gap-1.5">
                 {routedDocs.map((doc, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1 bg-[var(--accent-blue-light)] text-[var(--accent-blue)] rounded-md px-2 py-0.5 text-xs font-medium"
+                    className="inline-flex items-center gap-1 bg-[#e8f0fe] text-[#2383e2] rounded-md px-2 py-0.5 text-xs font-medium"
                   >
                     <FileText className="h-3 w-3" />
                     {doc}
@@ -304,8 +301,8 @@ function DebugPanel({
                 key={idx}
                 className={`p-2.5 rounded-lg border text-xs ${
                   chunk.pinned
-                    ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400"
-                    : "bg-[var(--bg-warm)] border-[var(--border-soft)]"
+                    ? "bg-amber-50 border-amber-200"
+                    : "bg-[#f7f7f5] border-[#e8e8e5]"
                 }`}
               >
                 <div className="flex items-center justify-between mb-1">
@@ -313,28 +310,28 @@ function DebugPanel({
                     {chunk.modality === "image" ? (
                       <ImageIcon className="h-3.5 w-3.5 text-pink-500 shrink-0" />
                     ) : (
-                      <FileText className="h-3.5 w-3.5 text-[var(--accent-blue)] shrink-0" />
+                      <FileText className="h-3.5 w-3.5 text-[#2383e2] shrink-0" />
                     )}
                     <span className="font-medium truncate">{chunk.doc_name}</span>
                     {chunk.page_number && (
-                      <span className="text-[var(--text-muted)] text-[11px]">
+                      <span className="text-[#9b9b93] text-[11px]">
                         p.{chunk.page_number}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
                     {chunk.pinned && (
-                      <span className="inline-flex items-center gap-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 text-[10px] px-1.5 py-0.5 rounded font-semibold">
+                      <span className="inline-flex items-center gap-0.5 bg-amber-100 text-amber-700 text-[10px] px-1.5 py-0.5 rounded font-semibold">
                         <Pin className="h-2.5 w-2.5" /> Pinned
                       </span>
                     )}
-                    <span className="font-mono text-[10px] bg-[var(--border-soft)] text-[var(--text-secondary)] px-1.5 py-0.5 rounded">
+                    <span className="font-mono text-[10px] bg-[#e8e8e5] text-[#6b6b60] px-1.5 py-0.5 rounded">
                       {chunk.score.toFixed(3)}
                     </span>
                   </div>
                 </div>
                 {chunk.text_preview && (
-                  <p className="font-mono text-[11px] text-[var(--text-secondary)] bg-[var(--bg-card)] p-1.5 rounded border border-[var(--border-soft)] mt-1 line-clamp-2">
+                  <p className="font-mono text-[11px] text-[#6b6b60] bg-white/80 p-1.5 rounded border border-[#e8e8e5] mt-1 line-clamp-2">
                     &ldquo;{chunk.text_preview}&rdquo;
                   </p>
                 )}
@@ -343,109 +340,6 @@ function DebugPanel({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-/* ════════════════════════════════════════════════════════════
-   FLOATING 3D TOM AND JERRY ANIMATED STICKERS & BADGES
-   ════════════════════════════════════════════════════════════ */
-function TomAndJerry3DBackground() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 tom-jerry-bg-pattern perspective-1000">
-      {/* 3D Sticker 1: Jerry with Cheese (Top Left) */}
-      <motion.div
-        animate={{
-          y: [-8, 8, -8],
-          rotateX: [-6, 6, -6],
-          rotateY: [-10, 10, -10],
-          rotateZ: [-3, 3, -3],
-        }}
-        transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-        whileHover={{ scale: 1.15, rotateZ: 12 }}
-        className="absolute top-16 left-6 md:left-12 pointer-events-auto cursor-pointer select-none"
-      >
-        <div className="bg-[var(--bg-card)]/90 backdrop-blur-md border border-amber-300/60 dark:border-amber-500/40 shadow-lg rounded-2xl p-2.5 flex items-center gap-2 transform transition-all duration-300 hover:shadow-amber-500/20 hover:border-amber-400">
-          <div className="w-9 h-9 rounded-xl bg-amber-400/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold text-lg">
-            🧀
-          </div>
-          <div className="pr-1">
-            <div className="text-[11px] font-bold text-[var(--text-primary)] flex items-center gap-1">
-              <span>Jerry&apos;s Cheese Retrieval</span>
-              <span className="text-[9px] bg-amber-500/20 text-amber-600 dark:text-amber-300 px-1 py-0.2 rounded font-mono">
-                RAG
-              </span>
-            </div>
-            <p className="text-[10px] text-[var(--text-secondary)]">Fast & grounded text chunks</p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* 3D Sticker 2: Tom Cat Chase (Top Right) */}
-      <motion.div
-        animate={{
-          y: [10, -6, 10],
-          rotateX: [8, -8, 8],
-          rotateY: [12, -12, 12],
-          rotateZ: [4, -4, 4],
-        }}
-        transition={{ duration: 8.5, repeat: Infinity, ease: "easeInOut" }}
-        whileHover={{ scale: 1.15, rotateZ: -10 }}
-        className="absolute top-20 right-6 md:right-16 pointer-events-auto cursor-pointer select-none"
-      >
-        <div className="bg-[var(--bg-card)]/90 backdrop-blur-md border border-blue-300/60 dark:border-blue-500/40 shadow-lg rounded-2xl p-2.5 flex items-center gap-2 transform transition-all duration-300 hover:shadow-blue-500/20 hover:border-blue-400">
-          <div className="w-9 h-9 rounded-xl bg-blue-400/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold text-lg">
-            🐱
-          </div>
-          <div className="pr-1">
-            <div className="text-[11px] font-bold text-[var(--text-primary)] flex items-center gap-1">
-              <span>Tom&apos;s Visual Indexer</span>
-              <span className="text-[9px] bg-blue-500/20 text-blue-600 dark:text-blue-300 px-1 py-0.2 rounded font-mono">
-                CLIP
-              </span>
-            </div>
-            <p className="text-[10px] text-[var(--text-secondary)]">Extracts figures & diagrams</p>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* 3D Sticker 3: Mouse Hole / Search Badge (Bottom Left) */}
-      <motion.div
-        animate={{
-          y: [-6, 10, -6],
-          rotateX: [-10, 5, -10],
-          rotateY: [-8, 8, -8],
-        }}
-        transition={{ duration: 9, repeat: Infinity, ease: "easeInOut" }}
-        whileHover={{ scale: 1.12, rotateZ: 6 }}
-        className="absolute bottom-24 left-8 md:left-16 hidden md:block pointer-events-auto cursor-pointer select-none"
-      >
-        <div className="bg-[var(--bg-card)]/80 backdrop-blur-md border border-[var(--border-soft)] shadow-md rounded-xl px-3 py-2 flex items-center gap-2">
-          <span className="text-base">🕳️</span>
-          <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
-            Mouse Hole Deep Reranking
-          </span>
-        </div>
-      </motion.div>
-
-      {/* 3D Sticker 4: Cartoon Trap & Cheese (Bottom Right) */}
-      <motion.div
-        animate={{
-          y: [8, -8, 8],
-          rotateX: [6, -6, 6],
-          rotateY: [10, -10, 10],
-        }}
-        transition={{ duration: 7.5, repeat: Infinity, ease: "easeInOut" }}
-        whileHover={{ scale: 1.12, rotateZ: -8 }}
-        className="absolute bottom-28 right-8 md:right-20 hidden md:block pointer-events-auto cursor-pointer select-none"
-      >
-        <div className="bg-[var(--bg-card)]/80 backdrop-blur-md border border-amber-300/50 dark:border-amber-500/30 shadow-md rounded-xl px-3 py-2 flex items-center gap-2">
-          <span className="text-base">🐾</span>
-          <span className="text-[11px] font-semibold text-[var(--text-secondary)]">
-            Tom & Jerry Multimodal Fusion
-          </span>
-        </div>
-      </motion.div>
     </div>
   );
 }
@@ -465,7 +359,6 @@ export default function Page() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showDocDrawer, setShowDocDrawer] = useState(false);
   const [dragActive, setDragActive] = useState(false);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
 
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -473,11 +366,6 @@ export default function Page() {
 
   useEffect(() => {
     setSessionId(getSessionId());
-    const savedTheme = localStorage.getItem("app_theme") as "light" | "dark" | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-      if (savedTheme === "dark") document.documentElement.classList.add("dark");
-    }
   }, []);
 
   useEffect(() => {
@@ -487,17 +375,6 @@ export default function Page() {
   useEffect(() => {
     chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isLoading]);
-
-  const toggleTheme = () => {
-    const nextTheme = theme === "light" ? "dark" : "light";
-    setTheme(nextTheme);
-    localStorage.setItem("app_theme", nextTheme);
-    if (nextTheme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
 
   const refreshDocuments = async () => {
     if (!sessionId) return;
@@ -613,15 +490,12 @@ export default function Page() {
 
   return (
     <div
-      className="flex flex-col h-screen w-full bg-[var(--bg-warm)] text-[var(--text-primary)] overflow-hidden relative font-sans transition-colors duration-300"
+      className="flex flex-col h-screen w-full bg-[#f7f7f5] text-[#37352f] overflow-hidden relative"
       onDragEnter={handleDrag}
       onDragOver={handleDrag}
       onDragLeave={handleDrag}
       onDrop={handleDrop}
     >
-      {/* 3D Tom & Jerry Floating Background */}
-      <TomAndJerry3DBackground />
-
       {/* Hidden file input */}
       <input
         type="file"
@@ -642,16 +516,16 @@ export default function Page() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 z-50 flex items-center justify-center bg-[var(--bg-card)]/95 backdrop-blur-md"
+            className="absolute inset-0 z-50 flex items-center justify-center bg-white/95 backdrop-blur-md"
           >
             <div className="flex flex-col items-center gap-4">
-              <div className="p-5 bg-[var(--accent-blue-light)] rounded-full animate-bounce">
-                <FileUp className="h-10 w-10 text-[var(--accent-blue)]" />
+              <div className="p-5 bg-[#e8f0fe] rounded-full animate-bounce">
+                <FileUp className="h-10 w-10 text-[#2383e2]" />
               </div>
-              <h3 className="text-xl font-bold text-[var(--text-primary)]">
+              <h3 className="text-xl font-bold text-[#37352f]">
                 Drop your PDF to index it
               </h3>
-              <p className="text-sm text-[var(--text-secondary)]">
+              <p className="text-sm text-[#6b6b60]">
                 Text, figures, and captions will be extracted and indexed
               </p>
             </div>
@@ -660,46 +534,24 @@ export default function Page() {
       </AnimatePresence>
 
       {/* ─── SLIM TOP BAR ─── */}
-      <header className="h-12 shrink-0 border-b border-[var(--border-soft)] bg-[var(--bg-card)]/80 backdrop-blur-md flex items-center justify-between px-5 z-20">
+      <header className="h-12 shrink-0 border-b border-[#e8e8e5] bg-white/80 backdrop-blur-md flex items-center justify-between px-5 z-10">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2383e2] to-[#6366f1] flex items-center justify-center shadow-xs">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#2383e2] to-[#6366f1] flex items-center justify-center">
             <Sparkles className="h-4 w-4 text-white" />
           </div>
-          <span className="font-bold text-[var(--text-primary)] text-sm tracking-tight flex items-center gap-1.5">
-            Multimodal RAG <span className="text-xs text-amber-500 font-mono">🐱🧀</span>
+          <span className="font-bold text-[#37352f] text-sm tracking-tight">
+            Multimodal RAG
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Light / Dark Mode Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-1.5 rounded-lg bg-[var(--bg-warm)] hover:bg-[var(--border-soft)] border border-[var(--border-soft)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition cursor-pointer flex items-center gap-1 text-xs"
-            title={`Switch to ${theme === "light" ? "Dark" : "Light"} Mode`}
-          >
-            {theme === "light" ? (
-              <>
-                <Moon className="h-3.5 w-3.5 text-indigo-500" />
-                <span className="hidden sm:inline font-medium">Dark</span>
-              </>
-            ) : (
-              <>
-                <Sun className="h-3.5 w-3.5 text-amber-400" />
-                <span className="hidden sm:inline font-medium">Light</span>
-              </>
-            )}
-          </button>
-
-          {/* Document Drawer Toggle */}
-          <button
-            onClick={() => setShowDocDrawer((d) => !d)}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-[var(--bg-warm)] hover:bg-[var(--border-soft)] border border-[var(--border-soft)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition cursor-pointer"
-          >
-            <FileText className="h-3.5 w-3.5" />
-            <span>Docs ({documents.length})</span>
-            <ChevronDown className={`h-3 w-3 transition-transform ${showDocDrawer ? "rotate-180" : ""}`} />
-          </button>
-        </div>
+        <button
+          onClick={() => setShowDocDrawer((d) => !d)}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#f7f7f5] hover:bg-[#e8e8e5] border border-[#e8e8e5] text-[#6b6b60] hover:text-[#37352f] transition cursor-pointer"
+        >
+          <FileText className="h-3.5 w-3.5" />
+          <span>Documents ({documents.length})</span>
+          <ChevronDown className={`h-3 w-3 transition-transform ${showDocDrawer ? "rotate-180" : ""}`} />
+        </button>
       </header>
 
       {/* ─── DOCUMENT DRAWER (slides down from top bar) ─── */}
@@ -710,16 +562,16 @@ export default function Page() {
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden bg-[var(--bg-drawer)] border-b border-[var(--border-soft)] z-20 shrink-0 shadow-md"
+            className="overflow-hidden bg-white border-b border-[#e8e8e5] z-10 shrink-0"
           >
             <div className="max-w-2xl mx-auto p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-[var(--text-muted)] uppercase tracking-wider">
+                <span className="text-xs font-bold text-[#9b9b93] uppercase tracking-wider">
                   Indexed PDFs — select which to search
                 </span>
                 <button
                   onClick={() => setShowUploadModal(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--accent-blue)] hover:opacity-90 text-white text-xs font-semibold transition cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#2383e2] hover:bg-[#1b6ec2] text-white text-xs font-semibold transition cursor-pointer"
                 >
                   <FileUp className="h-3.5 w-3.5" />
                   Upload PDF
@@ -729,10 +581,10 @@ export default function Page() {
               {documents.length === 0 ? (
                 <div
                   onClick={() => setShowUploadModal(true)}
-                  className="p-6 rounded-xl border-2 border-dashed border-[var(--border-soft)] hover:border-[var(--accent-blue)] flex flex-col items-center gap-2 cursor-pointer transition"
+                  className="p-6 rounded-xl border-2 border-dashed border-[#e8e8e5] hover:border-[#2383e2] flex flex-col items-center gap-2 cursor-pointer transition"
                 >
-                  <FileUp className="h-6 w-6 text-[var(--text-muted)]" />
-                  <span className="text-sm font-medium text-[var(--text-secondary)]">
+                  <FileUp className="h-6 w-6 text-[#9b9b93]" />
+                  <span className="text-sm font-medium text-[#6b6b60]">
                     No documents yet — click to upload a PDF
                   </span>
                 </div>
@@ -745,8 +597,8 @@ export default function Page() {
                         key={doc.doc_name}
                         className={`flex items-center justify-between px-3 py-2 rounded-xl border transition cursor-pointer ${
                           selected
-                            ? "bg-[var(--accent-blue-light)] border-[var(--accent-blue)]/40"
-                            : "bg-[var(--bg-warm)] border-[var(--border-soft)] hover:opacity-90"
+                            ? "bg-[#e8f0fe] border-[#2383e2]/30"
+                            : "bg-[#f7f7f5] border-[#e8e8e5] hover:bg-[#f0f0ed]"
                         }`}
                         onClick={() => toggleDoc(doc.doc_name)}
                       >
@@ -754,20 +606,20 @@ export default function Page() {
                           <div
                             className={`w-4 h-4 rounded border-2 flex items-center justify-center transition ${
                               selected
-                                ? "bg-[var(--accent-blue)] border-[var(--accent-blue)]"
-                                : "bg-[var(--bg-card)] border-[var(--text-muted)]"
+                                ? "bg-[#2383e2] border-[#2383e2]"
+                                : "bg-white border-[#d3d3d0]"
                             }`}
                           >
                             {selected && (
                               <Check className="h-2.5 w-2.5 text-white stroke-[3]" />
                             )}
                           </div>
-                          <FileText className="h-4 w-4 text-[var(--accent-blue)] shrink-0" />
+                          <FileText className="h-4 w-4 text-[#2383e2] shrink-0" />
                           <span className="text-sm font-medium truncate">
                             {doc.doc_name}
                           </span>
                           {doc.scanned_warning && (
-                            <span className="text-[10px] bg-amber-500/20 text-amber-600 dark:text-amber-400 px-1.5 py-0.5 rounded font-medium shrink-0">
+                            <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-medium shrink-0">
                               Low text
                             </span>
                           )}
@@ -777,7 +629,7 @@ export default function Page() {
                             e.stopPropagation();
                             handleDeleteDoc(doc.doc_name);
                           }}
-                          className="p-1 rounded-md text-[var(--text-muted)] hover:text-red-500 hover:bg-red-500/10 transition"
+                          className="p-1 rounded-md text-[#9b9b93] hover:text-red-500 hover:bg-red-50 transition"
                           title="Delete document"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
@@ -793,7 +645,7 @@ export default function Page() {
       </AnimatePresence>
 
       {/* ─── MAIN CONTENT AREA ─── */}
-      <div className="flex-1 flex flex-col overflow-hidden z-10">
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* ─── CHAT MESSAGES (scrollable) ─── */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-2xl mx-auto px-4 py-6">
@@ -803,23 +655,16 @@ export default function Page() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4 }}
-                className="flex flex-col items-center justify-center pt-[10vh] pb-8 text-center"
+                className="flex flex-col items-center justify-center pt-[12vh] pb-8 text-center"
               >
-                {/* 3D Animated Hero Icon */}
-                <motion.div
-                  animate={{ rotateY: [-10, 10, -10], y: [-4, 4, -4] }}
-                  transition={{ duration: 5, repeat: Infinity, ease: "easeInOut" }}
-                  className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2383e2] to-[#6366f1] flex items-center justify-center mb-6 shadow-xl relative group cursor-pointer"
-                >
-                  <Sparkles className="h-8 w-8 text-white group-hover:rotate-12 transition-transform" />
-                  <span className="absolute -top-2 -right-2 text-xl animate-bounce">🧀</span>
-                </motion.div>
-
-                <h1 className="text-3xl font-extrabold tracking-tight text-[var(--text-primary)] mb-2">
+                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-[#2383e2] to-[#6366f1] flex items-center justify-center mb-6 shadow-lg">
+                  <Sparkles className="h-8 w-8 text-white" />
+                </div>
+                <h1 className="text-3xl font-extrabold tracking-tight text-[#37352f] mb-2">
                   Ask your documents anything
                 </h1>
-                <p className="text-base text-[var(--text-secondary)] max-w-md leading-relaxed">
-                  Upload PDFs, then ask questions. Tom & Jerry multimodal RAG retrieves relevant text
+                <p className="text-base text-[#6b6b60] max-w-md leading-relaxed">
+                  Upload PDFs, then ask questions. The AI retrieves relevant text
                   and figures from your documents to generate grounded answers.
                 </p>
 
@@ -837,7 +682,7 @@ export default function Page() {
                         setInputText(suggestion);
                         inputRef.current?.focus();
                       }}
-                      className="px-4 py-2 rounded-full border border-[var(--border-soft)] bg-[var(--bg-card)] hover:border-[var(--accent-blue)] text-sm text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition cursor-pointer shadow-xs"
+                      className="px-4 py-2 rounded-full border border-[#e8e8e5] bg-white hover:bg-[#f7f7f5] hover:border-[#d3d3d0] text-sm text-[#6b6b60] hover:text-[#37352f] transition cursor-pointer"
                     >
                       {suggestion}
                     </button>
@@ -847,7 +692,7 @@ export default function Page() {
                 {documents.length === 0 && (
                   <button
                     onClick={() => setShowUploadModal(true)}
-                    className="mt-8 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[var(--accent-blue)] hover:opacity-90 text-white font-semibold text-sm transition cursor-pointer shadow-md"
+                    className="mt-8 flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#2383e2] hover:bg-[#1b6ec2] text-white font-semibold text-sm transition cursor-pointer shadow-md"
                   >
                     <FileUp className="h-4 w-4" />
                     Upload your first PDF
@@ -858,19 +703,19 @@ export default function Page() {
 
             {/* Message list */}
             <AnimatePresence>
-              {messages.map((msg) => (
+              {messages.map((msg, idx) => (
                 <motion.div
                   key={msg.id}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.25 }}
+                  transition={{ duration: 0.25, delay: 0.03 }}
                   className={`mb-6 ${
                     msg.sender === "user" ? "flex justify-end" : ""
                   }`}
                 >
                   {msg.sender === "user" ? (
                     /* ── USER BUBBLE ── */
-                    <div className="max-w-[80%] bg-[var(--accent-blue)] text-white px-5 py-3 rounded-2xl rounded-br-md shadow-sm">
+                    <div className="max-w-[80%] bg-[#2383e2] text-white px-5 py-3 rounded-2xl rounded-br-md shadow-sm">
                       <p className="text-[0.9375rem] leading-relaxed whitespace-pre-wrap">
                         {msg.text}
                       </p>
@@ -883,13 +728,13 @@ export default function Page() {
                         <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#2383e2] to-[#6366f1] flex items-center justify-center">
                           <Sparkles className="h-3 w-3 text-white" />
                         </div>
-                        <span className="text-xs font-semibold text-[var(--text-muted)] flex items-center gap-1">
+                        <span className="text-xs font-semibold text-[#9b9b93]">
                           AI · {msg.timestamp}
                         </span>
                       </div>
 
                       {/* Response card */}
-                      <div className="bg-[var(--bg-card)] rounded-2xl rounded-tl-md border border-[var(--border-soft)] px-5 py-4 shadow-sm">
+                      <div className="bg-white rounded-2xl rounded-tl-md border border-[#e8e8e5] px-5 py-4 shadow-sm">
                         <RenderMarkdown text={msg.text} />
 
                         {msg.response?.figure_urls &&
@@ -920,13 +765,13 @@ export default function Page() {
                 <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-[#2383e2] to-[#6366f1] flex items-center justify-center">
                   <Sparkles className="h-3 w-3 text-white" />
                 </div>
-                <div className="bg-[var(--bg-card)] rounded-2xl rounded-tl-md border border-[var(--border-soft)] px-5 py-3.5 shadow-sm flex items-center gap-3">
+                <div className="bg-white rounded-2xl rounded-tl-md border border-[#e8e8e5] px-5 py-3.5 shadow-sm flex items-center gap-3">
                   <div className="flex gap-1">
-                    <span className="thinking-dot w-2 h-2 rounded-full bg-[var(--accent-blue)]" />
-                    <span className="thinking-dot w-2 h-2 rounded-full bg-[var(--accent-blue)]" />
-                    <span className="thinking-dot w-2 h-2 rounded-full bg-[var(--accent-blue)]" />
+                    <span className="thinking-dot w-2 h-2 rounded-full bg-[#2383e2]" />
+                    <span className="thinking-dot w-2 h-2 rounded-full bg-[#2383e2]" />
+                    <span className="thinking-dot w-2 h-2 rounded-full bg-[#2383e2]" />
                   </div>
-                  <span className="text-sm text-[var(--text-secondary)] font-medium">
+                  <span className="text-sm text-[#6b6b60] font-medium">
                     Searching documents & generating answer…
                   </span>
                 </div>
@@ -938,29 +783,29 @@ export default function Page() {
         </div>
 
         {/* ─── INPUT BAR (always visible at bottom) ─── */}
-        <div className="shrink-0 border-t border-[var(--border-soft)] bg-[var(--bg-card)]/80 backdrop-blur-md">
+        <div className="shrink-0 border-t border-[#e8e8e5] bg-white/80 backdrop-blur-md">
           <div className="max-w-2xl mx-auto px-4 py-3 space-y-2">
             {/* Attached doc badges */}
             {documents.length > 0 && (
               <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[11px] font-semibold text-[var(--text-muted)]">
+                <span className="text-[11px] font-semibold text-[#9b9b93]">
                   Searching:
                 </span>
                 {selectedDocs.length === 0 ? (
-                  <span className="text-[11px] text-amber-500 flex items-center gap-1">
+                  <span className="text-[11px] text-amber-600 flex items-center gap-1">
                     <Info className="h-3 w-3" /> No docs selected
                   </span>
                 ) : (
                   selectedDocs.map((doc) => (
                     <span
                       key={doc}
-                      className="inline-flex items-center gap-1 bg-[var(--accent-blue-light)] text-[var(--accent-blue)] rounded-md px-2 py-0.5 text-[11px] font-medium"
+                      className="inline-flex items-center gap-1 bg-[#e8f0fe] text-[#2383e2] rounded-md px-2 py-0.5 text-[11px] font-medium"
                     >
                       <FileText className="h-3 w-3" />
                       <span className="truncate max-w-[120px]">{doc}</span>
                       <button
                         onClick={() => toggleDoc(doc)}
-                        className="opacity-70 hover:opacity-100 ml-0.5"
+                        className="text-[#2383e2]/60 hover:text-[#2383e2] ml-0.5"
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -972,11 +817,11 @@ export default function Page() {
 
             {/* Input form */}
             <form onSubmit={handleSend} className="relative flex items-center">
-              <div className="flex-1 flex items-center bg-[var(--input-bg)] border border-[var(--border-soft)] rounded-2xl focus-within:border-[var(--accent-blue)] focus-within:ring-2 focus-within:ring-[var(--accent-blue)]/15 transition pl-1 pr-1.5">
+              <div className="flex-1 flex items-center bg-[#f7f7f5] border border-[#e8e8e5] rounded-2xl focus-within:border-[#2383e2] focus-within:ring-2 focus-within:ring-[#2383e2]/15 transition pl-1 pr-1.5">
                 <button
                   type="button"
                   onClick={() => setShowUploadModal(true)}
-                  className="p-2.5 text-[var(--text-muted)] hover:text-[var(--accent-blue)] rounded-xl hover:bg-[var(--accent-blue-light)] transition cursor-pointer"
+                  className="p-2.5 text-[#9b9b93] hover:text-[#2383e2] rounded-xl hover:bg-[#e8f0fe] transition cursor-pointer"
                   title="Upload PDF"
                 >
                   <Paperclip className="h-5 w-5" />
@@ -993,7 +838,7 @@ export default function Page() {
                       : "Ask a question about your documents…"
                   }
                   disabled={isLoading}
-                  className="flex-1 bg-transparent py-3 px-2 border-none outline-none focus:ring-0 text-[var(--text-primary)] text-[0.9375rem] placeholder:text-[var(--text-muted)] min-w-0"
+                  className="flex-1 bg-transparent py-3 px-2 border-none outline-none focus:ring-0 text-[#37352f] text-[0.9375rem] placeholder:text-[#9b9b93] min-w-0"
                 />
 
                 <button
@@ -1001,8 +846,8 @@ export default function Page() {
                   disabled={!inputText.trim() || isLoading}
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition ${
                     inputText.trim() && !isLoading
-                      ? "bg-[var(--accent-blue)] hover:opacity-90 text-white cursor-pointer shadow-sm"
-                      : "bg-[var(--border-soft)] text-[var(--text-muted)] cursor-not-allowed"
+                      ? "bg-[#2383e2] hover:bg-[#1b6ec2] text-white cursor-pointer shadow-sm"
+                      : "bg-[#e8e8e5] text-[#9b9b93] cursor-not-allowed"
                   }`}
                 >
                   <ArrowUp className="h-4 w-4 stroke-[2.5]" />
@@ -1010,7 +855,7 @@ export default function Page() {
               </div>
             </form>
 
-            <p className="text-center text-[11px] text-[var(--text-muted)]">
+            <p className="text-center text-[11px] text-[#9b9b93]">
               Answers are grounded in your uploaded documents using Multimodal RAG
             </p>
           </div>
@@ -1020,22 +865,22 @@ export default function Page() {
       {/* ─── UPLOAD MODAL ─── */}
       <AnimatePresence>
         {showUploadModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-[var(--bg-card)] rounded-2xl shadow-xl w-full max-w-md border border-[var(--border-soft)] overflow-hidden"
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md border border-[#e8e8e5] overflow-hidden"
             >
               {/* Modal header */}
-              <div className="flex items-center justify-between p-5 border-b border-[var(--border-soft)]">
+              <div className="flex items-center justify-between p-5 border-b border-[#e8e8e5]">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-[var(--accent-blue-light)] text-[var(--accent-blue)] rounded-xl">
+                  <div className="p-2 bg-[#e8f0fe] text-[#2383e2] rounded-xl">
                     <FileText className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-bold text-[var(--text-primary)]">Upload PDF</h3>
-                    <p className="text-xs text-[var(--text-muted)]">
+                    <h3 className="font-bold text-[#37352f]">Upload PDF</h3>
+                    <p className="text-xs text-[#9b9b93]">
                       Extract text & figures for RAG indexing
                     </p>
                   </div>
@@ -1045,7 +890,7 @@ export default function Page() {
                     setShowUploadModal(false);
                     setUploadError(null);
                   }}
-                  className="p-1.5 rounded-lg hover:bg-[var(--bg-warm)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition cursor-pointer"
+                  className="p-1.5 rounded-lg hover:bg-[#f7f7f5] text-[#9b9b93] hover:text-[#37352f] transition cursor-pointer"
                 >
                   <X className="h-4 w-4" />
                 </button>
@@ -1054,7 +899,7 @@ export default function Page() {
               {/* Modal body */}
               <div className="p-5 space-y-4">
                 {uploadError && (
-                  <div className="p-3 bg-red-500/10 border border-red-500/30 rounded-xl flex items-start gap-2 text-red-600 dark:text-red-400 text-sm">
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-2 text-red-700 text-sm">
                     <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
                     <span>{uploadError}</span>
                   </div>
@@ -1062,21 +907,21 @@ export default function Page() {
 
                 <div
                   onClick={() => fileInputRef.current?.click()}
-                  className="border-2 border-dashed border-[var(--border-soft)] hover:border-[var(--accent-blue)] rounded-2xl p-10 flex flex-col items-center text-center cursor-pointer hover:bg-[var(--accent-blue-light)]/20 transition group"
+                  className="border-2 border-dashed border-[#e8e8e5] hover:border-[#2383e2] rounded-2xl p-10 flex flex-col items-center text-center cursor-pointer hover:bg-[#e8f0fe]/20 transition group"
                 >
-                  <div className="p-4 bg-[var(--accent-blue-light)] rounded-full text-[var(--accent-blue)] group-hover:scale-110 transition-transform mb-3">
+                  <div className="p-4 bg-[#e8f0fe] rounded-full text-[#2383e2] group-hover:scale-110 transition-transform mb-3">
                     <FileUp className="h-8 w-8" />
                   </div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  <p className="text-sm font-semibold text-[#37352f]">
                     Click to select or drag & drop
                   </p>
-                  <p className="text-xs text-[var(--text-muted)] mt-1">
+                  <p className="text-xs text-[#9b9b93] mt-1">
                     PDF files up to 100 pages
                   </p>
                 </div>
 
                 {isUploading && (
-                  <div className="flex items-center justify-center gap-2 text-sm font-medium text-[var(--accent-blue)] py-2">
+                  <div className="flex items-center justify-center gap-2 text-sm font-medium text-[#2383e2] py-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
                     <span>Extracting text & figures, building indexes…</span>
                   </div>
@@ -1088,7 +933,7 @@ export default function Page() {
                       setShowUploadModal(false);
                       setUploadError(null);
                     }}
-                    className="px-4 py-2 rounded-xl text-sm font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--bg-warm)] transition cursor-pointer"
+                    className="px-4 py-2 rounded-xl text-sm font-medium text-[#6b6b60] hover:text-[#37352f] hover:bg-[#f7f7f5] transition cursor-pointer"
                   >
                     Cancel
                   </button>

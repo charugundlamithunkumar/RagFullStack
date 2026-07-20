@@ -5,8 +5,7 @@
 
 :root {
   --bg-warm: #f7f7f5;
-  --bg-card: #ffffff;
-  --bg-drawer: #ffffff;
+  --bg-white: #ffffff;
   --border-soft: #e8e8e5;
   --text-primary: #37352f;
   --text-secondary: #6b6b60;
@@ -14,23 +13,13 @@
   --accent-blue: #2383e2;
   --accent-blue-light: #e8f0fe;
   --accent-blue-soft: #dbeafe;
-  --input-bg: #f7f7f5;
-  --code-bg: #f0efed;
-}
-
-.dark {
-  --bg-warm: #121212;
-  --bg-card: #1e1e1e;
-  --bg-drawer: #1a1a1a;
-  --border-soft: #2e2e2e;
-  --text-primary: #f1f1ef;
-  --text-secondary: #9b9b96;
-  --text-muted: #6e6e6a;
-  --accent-blue: #3b82f6;
-  --accent-blue-light: #1e293b;
-  --accent-blue-soft: #172554;
-  --input-bg: #1a1a1a;
-  --code-bg: #2a2a2a;
+  --accent-indigo: #6366f1;
+  --shadow-sm: 0 1px 3px rgba(55, 53, 47, 0.06);
+  --shadow-md: 0 4px 12px rgba(55, 53, 47, 0.08);
+  --shadow-lg: 0 8px 30px rgba(55, 53, 47, 0.12);
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
 }
 
 @layer base {
@@ -44,7 +33,6 @@
     color: var(--text-primary);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    transition: background-color 0.3s ease, color 0.3s ease;
   }
 }
 
@@ -57,11 +45,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(120, 120, 120, 0.2);
+  background: rgba(55, 53, 47, 0.12);
   border-radius: 999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(120, 120, 120, 0.4);
+  background: rgba(55, 53, 47, 0.25);
 }
 
 /* ─── Selection ─── */
@@ -75,6 +63,11 @@
   outline: 2px solid var(--accent-blue);
   outline-offset: 2px;
   border-radius: 4px;
+}
+
+/* ─── Transition utilities ─── */
+.transition-base {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ─── Markdown response styling ─── */
@@ -126,18 +119,14 @@
 .ai-response code {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.82em;
-  background: var(--code-bg);
+  background: #f0efed;
   padding: 0.15em 0.4em;
   border-radius: 4px;
-  color: #e11d48;
-}
-
-.dark .ai-response code {
-  color: #fb7185;
+  color: #d1344b;
 }
 
 .ai-response pre {
-  background: #1e1e1e;
+  background: #292929;
   color: #e6e6e6;
   padding: 1em 1.25em;
   border-radius: 12px;
@@ -145,7 +134,6 @@
   font-size: 0.82rem;
   line-height: 1.6;
   margin: 0.75em 0;
-  border: 1px solid var(--border-soft);
 }
 .ai-response pre code {
   background: none;
@@ -161,47 +149,21 @@
   font-style: italic;
 }
 
-/* ─── 3D Transform & Floating Animations ─── */
-.perspective-1000 {
-  perspective: 1000px;
+/* ─── Keyframes ─── */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50%      { opacity: 1;   transform: scale(1.15); }
 }
 
-@keyframes float3d {
-  0%, 100% {
-    transform: translateY(0px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
-  }
-  25% {
-    transform: translateY(-8px) rotateX(4deg) rotateY(-4deg) rotateZ(1deg);
-  }
-  50% {
-    transform: translateY(-4deg) rotateX(-2deg) rotateY(5deg) rotateZ(-1deg);
-  }
-  75% {
-    transform: translateY(-12px) rotateX(3deg) rotateY(-3deg) rotateZ(2deg);
-  }
+.animate-fade-in-up {
+  animation: fadeInUp 0.35s ease-out both;
 }
-
-@keyframes shake3d {
-  0%, 100% { transform: rotate(0deg) scale(1); }
-  20% { transform: rotate(-3deg) scale(1.02); }
-  40% { transform: rotate(3deg) scale(1.02); }
-  60% { transform: rotate(-2deg) scale(1.01); }
-  80% { transform: rotate(2deg) scale(1.01); }
+.thinking-dot {
+  animation: pulse-dot 1.2s ease-in-out infinite;
 }
-
-.animate-float-3d {
-  animation: float3d 6s ease-in-out infinite;
-}
-
-.animate-shake-hover:hover {
-  animation: shake3d 0.5s ease-in-out infinite;
-}
-
-/* ─── Background Tom & Jerry Watermark/Pattern ─── */
-.tom-jerry-bg-pattern {
-  background-image: radial-gradient(circle at 50% 50%, rgba(35, 131, 226, 0.03) 0%, transparent 60%);
-}
-
-.dark .tom-jerry-bg-pattern {
-  background-image: radial-gradient(circle at 50% 50%, rgba(59, 130, 246, 0.05) 0%, transparent 60%);
-}
+.thinking-dot:nth-child(2) { animation-delay: 0.2s; }
+.thinking-dot:nth-child(3) { animation-delay: 0.4s; }
